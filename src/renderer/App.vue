@@ -1,15 +1,14 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png">
-  <HelloWorld msg="Welcome to Your Vue.js App"/>
+  <MultiControl/>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import MultiControl from './components/multiControl/index.vue'
 
 export default {
   name: 'App',
   components: {
-    HelloWorld
+    MultiControl
   }
 }
 </script>
@@ -21,6 +20,8 @@ export default {
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
   color: #2c3e50;
-  margin-top: 60px;
+}
+.dokit-logo{
+  width: 300px;
 }
 </style>

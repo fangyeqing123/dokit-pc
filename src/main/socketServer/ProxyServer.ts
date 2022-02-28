@@ -56,8 +56,8 @@ export class ProxyServer {
       }
     })
   }
-   // @ts-ignore
-   _addClientMsgListener(socket: WebSocket, request: IncomingMessage) {
+  // @ts-ignore
+  _addClientMsgListener(socket: WebSocket, request: IncomingMessage) {
     try {
       const ip = request.socket.remoteAddress;  // 获取远程ip 区分设备
       // 记录 native 端
@@ -92,7 +92,7 @@ export class ProxyServer {
       this._handleBackgroundEmitMsg(message, clentId)
     })
   }
-  
+
   _handleBackgroundEmitMsg(message: any, clientId: number) {
     if (message.type === 'LOGIN') {
       //@ts-ignore
@@ -101,26 +101,35 @@ export class ProxyServer {
   }
 
   _handleClientEmitMsg(message: any, clientInfo: any) {
-    let pathArray:Array<string> = Url.parse(clientInfo.requestPath).pathname.split('/')
+    let pathArray: Array<string> = Url.parse(clientInfo.requestPath).pathname.split('/')
     if (pathArray && pathArray[2] === 'multicontrol' && pathArray[3]) {
-      // 已连接设备登录
-      if (message.type === 'LOGIN') {
-        // 触发eventEmitter 向background发送消息
-        this.eventEmitter.emit('multicontrol/background', message, clientInfo.id)
-        this._clientInfo[pathArray[3]] = this._clientInfo[pathArray[3]] || new Map<number, Client>()
-        this._clientInfo[pathArray[3]].set(clientInfo.id, this._clients.get(clientInfo.id))
-      }
-      // 已登录设备广播数据
-      if (message.type === 'BROADCAST') {
-        Array.from(this._clientInfo[pathArray[3]].entries()).forEach(
-          // @ts-ignore
-          ([clientId, client]) => {
-            console.log('clientId', clientId, 'message', message)
-            if (clientId !== clientInfo.id) {
-              client.sendMsgToClient(message)
+      switch (message.type) {
+        // 已连接设备登录
+        case 'LOGIN':
+          // 触发eventEmitter 向background发送消息
+          this.eventEmitter.emit('multicontrol/background', message, clientInfo.id)
+          this._clientInfo[pathArray[3]] = this._clientInfo[pathArray[3]] || new Map<number, Client>()
+          this._clientInfo[pathArray[3]].set(clientInfo.id, this._clients.get(clientInfo.id))
+          break;
+        // 已登录设备广播数据
+        case 'BROADCAST':
+          Array.from(this._clientInfo[pathArray[3]].entries()).forEach(
+            // @ts-ignore
+            ([clientId, client]) => {
+              console.log('clientId', clientId, 'message', message)
+              if (clientId !== clientInfo.id) {
+                client.sendMsgToClient(message)
+              }
             }
-          }
-        )
+          )
+          break;
+        // 心跳
+        case 'HEART_BEAT':
+          // @ts-ignore
+          this._clients.get(clientInfo.id).sendMsgToClient(message)
+          break;
+        default:
+          break;
       }
     }
   }

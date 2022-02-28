@@ -3,7 +3,7 @@
     <el-row justify="center" style="width:100%;height: 200px;text-align:center;">
       <el-button type="primary" round v-show="!showQRCode" @click="startSocketServer">开启socket中转服务</el-button>
       <div v-show="showQRCode">
-        <a class="qrcode" id="qrcode"></a>
+        <span class="qrcode" id="qrcode"></span>
       </div>
     </el-row>
     

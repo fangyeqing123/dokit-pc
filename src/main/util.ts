@@ -1,6 +1,6 @@
 import path from 'path'
 
-export const isPidRunning = (pid) => {
+export const isPidRunning = (pid:any) => {
   try {
     process.kill(pid, 0)
     return true
@@ -9,13 +9,13 @@ export const isPidRunning = (pid) => {
   }
 }
 
-export const killProcess = (pid) => {
+export const killProcess = (pid:any) => {
   if (pid && isPidRunning(pid)) {
     process.kill(pid)
   }
 }
 
-export const resolvePath = (dirPath) => {
+export const resolvePath = (dirPath:string) => {
   const isDevelopment = process.env.NODE_ENV !== 'production'
   const startPath = path.join(__dirname, isDevelopment?'../src':'..')
   console.log('__dirname', __dirname)

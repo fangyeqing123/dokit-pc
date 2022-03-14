@@ -1,0 +1,40 @@
+/* 全局样式 */
+
+.app-container {
+  padding: 20px;
+}
+
+body {
+  height: 100%;
+  margin: 0px;
+}
+
+html {
+  height: 100%;
+}
+
+#app {
+  height: 100%;
+}
+
+*,
+*:before,
+*:after {
+  box-sizing: border-box;
+}
+
+a,
+a:focus,
+a:hover {
+  color: inherit;
+  outline: none;
+  text-decoration: none;
+}
+
+div:focus {
+  outline: none;
+}
+
+.el-popper.add-passageway-tooltip {
+  box-shadow: 2px 2px 5px #dbdbdb !important;
+}

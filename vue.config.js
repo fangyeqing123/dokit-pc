@@ -1,7 +1,7 @@
 module.exports = {
   pluginOptions:{
     electronBuilder:{
-      preload:'src/main/preload.js',
+      preload:'src/main/preload.ts',
       builderOptions: {
         asar: false,
         // extraResources: [{

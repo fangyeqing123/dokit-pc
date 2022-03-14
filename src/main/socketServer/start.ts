@@ -1,10 +1,10 @@
 const {runProxyServer} = require("./index")
 
-export const startProxyServer = () => {
+export const startProxyServer = async () => {
   try {
     // 启动服务
     // TODO: 查找free port
-    const info = runProxyServer('22684')
+    const info = await runProxyServer()
     return info
   } catch (error) {
     return null

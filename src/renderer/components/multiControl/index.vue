@@ -54,13 +54,12 @@ export default {
     },
     initListener() {
       this.$electron.onMulticontrolEmit((message)=> {
-        console.log('aaaa', message)
         this.clientList = message
       })
     }
   },
 }
 </script>
-<style lang="">
+<style lang="scss" scope>
   
 </style>

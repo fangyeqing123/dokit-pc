@@ -7,7 +7,7 @@ import path from 'path'
 import { startProxyServer } from './main/socketServer/start'
 // import db from './main/dataStore'
 import { init as multiControlInit, getMulticontrolMachine } from './main/multiControl'
-import { addPassageway, getPassagewayList,deletePassageway } from './main/dataService'
+import { addPassageway, getPassagewayList, deletePassageway, editMachineName, deleteMachine } from './main/dataService'
 // import { dns } from 'address'
 const isDevelopment = process.env.NODE_ENV !== 'production'
 
@@ -62,8 +62,8 @@ async function createWindow() {
     serverInfo.eventEmitter.on('background/machineConnection', (info: any) => {
       win.webContents.send('multicontrol/Connection', JSON.stringify(info))
     })
-    serverInfo.eventEmitter.on('background/message', (message:string, clientInfo:any, type:string) => {
-      win.webContents.send('multicontrol/message', JSON.stringify({message,clientInfo,type}))
+    serverInfo.eventEmitter.on('background/message', (message: string, clientInfo: any, type: string) => {
+      win.webContents.send('multicontrol/message', JSON.stringify({ message, clientInfo, type }))
     })
   } catch (error) {
     console.error(error)
@@ -136,6 +136,12 @@ ipcMain.handle('getDataService', async (event, arg) => {
       return JSON.stringify(data)
     case 'deletePassageway':
       data = deletePassageway(arg.data.id)
+      return JSON.stringify(data)
+    case 'editMachineName':
+      data = editMachineName(arg.data.passageway, arg.data.id, arg.data.identificationName)
+      return JSON.stringify(data)
+    case 'deleteMachine':
+      data = deleteMachine(arg.data.passageway, arg.data.id)
       return JSON.stringify(data)
     default:
       return null

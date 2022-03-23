@@ -10,7 +10,7 @@ import 'element-plus/dist/index.css'
 import 'element-plus/theme-chalk/display.css'
 import './renderer/assets/qrcode'
 import { createPinia } from 'pinia';
-
+import { move } from './renderer/utils/move' 
 const app = createApp(App)
 // 把electron挂到app全局
 // @ts-ignore
@@ -18,7 +18,7 @@ app.config.globalProperties.$electron = window.electron
 
 // 挂载lowdb
 // app.config.globalProperties.$db = db
-
+app.directive('move', move)
 app.use(ElementPlus).use(JsonViewer)
 
 // 注册Pinia

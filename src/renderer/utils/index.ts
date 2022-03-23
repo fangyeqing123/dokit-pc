@@ -11,3 +11,12 @@ export const copyText = (text: string) => {
         type: "success",
     });
 }
+
+export const canJsonParse = (str: string) => {
+    try {
+       JSON.parse(str);
+       return true;
+    } catch (e) {
+        return false;
+    }
+}

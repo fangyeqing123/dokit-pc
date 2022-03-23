@@ -17,6 +17,12 @@
         >
         </el-option>
       </el-select>
+      <div>搜索:</div>
+      <el-input
+        class="filter-message-input"
+        v-model="filterMessageText"
+        placeholder="请输入搜索"
+      />
       <el-button type="danger" @click="clearMessageList">清空</el-button>
     </div>
     <div class="message-list-content">
@@ -67,7 +73,26 @@
                 fill="#d81e06"
               ></path>
             </svg>
-            <span style="margin-left: 10px">{{ scope.row.message }}</span>
+            <span
+              style="margin-left: 10px"
+              v-if="switchMessage(scope.row.message).type !== 'DATA'"
+              >{{ scope.row.message }}</span
+            >
+            <template v-else>
+              <span style="margin-left: 10px"
+                >type：{{ switchMessage(scope.row.message).type }}</span
+              >
+              <span
+                style="margin-left: 10px"
+                v-if="switchMessage(scope.row.message).contentType"
+                >contentType：{{ switchMessage(scope.row.message).contentType }}</span
+              >
+              <span
+                style="margin-left: 10px"
+                v-if="switchMessage(switchMessage(scope.row.message).data).url"
+                >{{ switchMessage(switchMessage(scope.row.message).data).url }}</span
+              >
+            </template>
           </template>
         </el-table-column>
         <!-- <el-table-column prop="time" label="时间"></el-table-column> -->
@@ -75,12 +100,15 @@
     </div>
     <el-drawer
       v-model="drawer"
-      modal-class="messageDetail"
+      modal-class="socketMessageDetail"
       style="position: absolute"
       :modal="false"
-      title="消息详情"
       direction="btt"
     >
+      <template #title>
+        <div class="moveBtn" v-move="'socketMessageDetail'"></div>
+        <div class="title">消息详情</div>
+      </template>
       <json-viewer :value="messageDetail" copyable boxed sort />
     </el-drawer>
   </div>
@@ -90,6 +118,7 @@ import "vue3-json-viewer/dist/index.css";
 import { ref, getCurrentInstance, onMounted, watch, computed } from "vue";
 import appStore from "../../../store";
 import { storeToRefs } from "pinia";
+import { canJsonParse } from "../../../utils";
 const { proxy }: any = getCurrentInstance();
 const { passagewayActive } = storeToRefs(appStore.socketPassageWay);
 const messageTypeList = ref([
@@ -119,6 +148,17 @@ const messageList = ref({});
 const filtersMessageList = ref([]);
 const messageDetail = ref("");
 const drawer = ref(false);
+const filterMessageText = ref("");
+const switchMessage = (val) => {
+  try {
+    let messageObject = {};
+    val && (messageObject = JSON.parse(val));
+    return messageObject;
+  } catch (error) {
+    console.error(error);
+    return {};
+  }
+};
 const messageListRowClassName = ({ row, rowIndex }) => {
   if (row.type === "accept") {
     return "accept-row";
@@ -131,8 +171,32 @@ const initListener = () => {
   proxy.$electron.onMulticontrolMessage((message: any) => {
     try {
       let data = JSON.parse(message);
+      let mergeRequest = false;
+      let mergeRequestIndex = -1;
       messageList.value[data.clientInfo.requestPath] ||
         (messageList.value[data.clientInfo.requestPath] = []);
+      let dataContentType = JSON.parse(data.message)?.contentType;
+      let dataDid = JSON.parse(JSON.parse(data.message)?.data)?.did;
+      if (dataContentType === "response") {
+        messageList.value[data.clientInfo.requestPath].some((item, index) => {
+          if (dataDid && JSON.parse(JSON.parse(item.message)?.data)?.did === dataDid) {
+            mergeRequest = true;
+            mergeRequestIndex = index;
+            return true;
+          }
+        });
+      }
+      if (mergeRequest) {
+        let newData = JSON.parse(data.message);
+        let messageData = JSON.parse(newData.data);
+        messageData.url = JSON.parse(
+          JSON.parse(
+            messageList.value[data.clientInfo.requestPath][mergeRequestIndex].message
+          ).data
+        ).url;
+        newData.data = JSON.stringify(messageData);
+        data.message = JSON.stringify(newData);
+      }
       messageList.value[data.clientInfo.requestPath].push(data);
     } catch (error) {
       console.error(error);
@@ -152,14 +216,14 @@ const clearMessageList = () => {
 const filtersMessageListWatch = () => {
   try {
     if (messageTypeActive.value === "ALL") {
-      return messageList.value[passagewayName.value];
+      return messageList.value[passagewayName.value] || [];
     }
-    return messageList.value[passagewayName.value].filter((item) => {
+    return (messageList.value[passagewayName.value] || []).filter((item) => {
       return JSON.parse(item.message).type === messageTypeActive.value;
     });
   } catch (error) {
     console.error(error);
-    return messageList.value[passagewayName.value];
+    return messageList.value[passagewayName.value] || [];
   }
 };
 const passagewayName = computed(() => {
@@ -170,15 +234,37 @@ const passagewayName = computed(() => {
 const openDetails = (row, column, cell, event) => {
   try {
     drawer.value = true;
-    messageDetail.value = JSON.parse(row.message);
+    let value = JSON.parse(row.message);
+    value.data = JSON.parse(value.data);
+    for (const key in value.data) {
+      if (Object.prototype.hasOwnProperty.call(value.data, key)) {
+        if (canJsonParse(value.data[key])) {
+          value.data[key] = JSON.parse(value.data[key]);
+        }
+      }
+    }
+    messageDetail.value = value;
   } catch (error) {
     console.error(error);
   }
 };
 watch(
-  [() => messageList.value, () => passagewayName.value,() => messageTypeActive.value],
+  [
+    () => messageList.value,
+    () => passagewayName.value,
+    () => messageTypeActive.value,
+    () => filterMessageText.value,
+  ],
   (newValue, oldValue) => {
-    filtersMessageList.value = filtersMessageListWatch();
+    let list = filtersMessageListWatch();
+    if (filterMessageText.value.trim() !== "") {
+      list = list.filter((item) => item.message.indexOf(filterMessageText.value) >= 0);
+    }
+    if (list?.length > 500) {
+      filtersMessageList.value = list.slice(-500);
+    } else {
+      filtersMessageList.value = list;
+    }
   },
   { deep: true }
 );
@@ -194,7 +280,13 @@ onMounted(async () => {
   .message-type-box {
     display: flex;
     align-items: center;
+    padding: 15px 15px 0 15px;
     .message-type-select {
+      margin-left: 10px;
+      margin-right: 10px;
+    }
+    .filter-message-input {
+      width: 400px;
       margin-left: 10px;
       margin-right: auto;
     }
@@ -203,6 +295,7 @@ onMounted(async () => {
     display: flex;
     flex-direction: column;
     flex: 1;
+    padding: 0 15px 0 15px;
     .el-table__inner-wrapper {
       overflow: auto;
       display: flex;
@@ -229,13 +322,28 @@ onMounted(async () => {
       }
     }
   }
-  .messageDetail {
+  .socketMessageDetail {
     position: relative !important;
     height: 30%;
     .el-drawer {
       height: 100% !important;
       .el-drawer__header {
         margin-bottom: 0;
+      }
+    }
+    #el-drawer__title {
+      .moveBtn {
+        width: 100%;
+        height: 3px;
+        /* opacity: 0; */
+        position: absolute;
+        left: 0px;
+        top: 0;
+        cursor: ns-resize;
+      }
+      .title{
+        margin-right: auto;
+        font-size: 16px;
       }
     }
   }

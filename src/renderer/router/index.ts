@@ -15,7 +15,6 @@ export const constantRoutes: Array<RouteRecordRaw> = [
             meta: {
               title: '一机多控',
               icon: 'https://pt-starimg.didistatic.com/static/starimg/img/yTuclEwP6J1646376356382.png',
-              affix: true
             }
           }
         ]

@@ -147,42 +147,42 @@ export class ProxyServer {
           if (message.contentType === "request") {
             // 请求触发上报
             let pathObject: any = {}
-            pathObject[`${dataInfo.path}`] = dataInfo
+            pathObject[`${dataInfo.searchKey}`] = dataInfo
             requestPool.data.set(dataInfo.did, dataInfo)
             requestPool.data.set(dataInfo.aid, { ...requestPool.data.get(dataInfo.aid), ...pathObject })
-            requestPool.data.set(dataInfo.path, dataInfo)
+            requestPool.data.set(dataInfo.searchKey, dataInfo)
             console.log(`请求：${JSON.stringify(dataInfo)}`)
             console.log('toBeSentRequestclient', requestPool.toBeSentRequestclient);
             let aidHasPath = requestPool.toBeSentRequestclient.get(dataInfo.aid);
-            let pathHasPath = requestPool.toBeSentRequestclient.get(dataInfo.path);
-            if (aidHasPath && aidHasPath[dataInfo.path]) {
-              let clientId = aidHasPath[dataInfo.path].clientInfo.id
-              let pid = aidHasPath[dataInfo.path].pid
-              clearTimeout(aidHasPath[dataInfo.path].requestTimer);
+            let pathHasPath = requestPool.toBeSentRequestclient.get(dataInfo.searchKey);
+            if (aidHasPath && aidHasPath[dataInfo.searchKey]) {
+              let clientId = aidHasPath[dataInfo.searchKey].clientInfo.id
+              let pid = aidHasPath[dataInfo.searchKey].pid
+              clearTimeout(aidHasPath[dataInfo.searchKey].requestTimer);
               var responseTimer = setTimeout(() => {
                 // @ts-ignore
                 this._clients.get(clientId).sendMsgToClient({ type: 'DATA', pid, code: 404, message: '找不到该请求' })
               }, 10 * 3600);
-              console.log(`toBeSentRequestclient请求上传：${{ type: 'DATA', pid, data: JSON.stringify(aidHasPath[dataInfo.path]) }}`)
-              delete requestPool.toBeSentRequestclient.get(dataInfo.aid)[dataInfo.path];
+              console.log(`toBeSentRequestclient请求上传：${JSON.stringify({ type: 'DATA', pid, data: JSON.stringify(aidHasPath[dataInfo.searchKey]) })}`)
               let responsePathObject: any = {}
-              responsePathObject[`${dataInfo.path}`] = { clientInfo: aidHasPath[dataInfo.path].clientInfo, dataInfo: aidHasPath[dataInfo.path].dataInfo, pid, responseTimer }
+              responsePathObject[`${dataInfo.searchKey}`] = { clientInfo: aidHasPath[dataInfo.searchKey].clientInfo, dataInfo: aidHasPath[dataInfo.searchKey].dataInfo, pid, responseTimer }
               requestPool.toBeSentResponseclient.set(dataInfo.aid, { ...requestPool.toBeSentResponseclient.get(dataInfo.aid), ...responsePathObject })
-              requestPool.toBeSentResponseclient.set(dataInfo.path, responsePathObject[`${dataInfo.path}`])
+              requestPool.toBeSentResponseclient.set(dataInfo.searchKey, responsePathObject[`${dataInfo.searchKey}`])
+              delete requestPool.toBeSentRequestclient.get(dataInfo.aid)[dataInfo.searchKey];
             } else if (pathHasPath) {
-              let clientId = pathHasPath[dataInfo.path].clientInfo.id
-              let pid = pathHasPath[dataInfo.path].pid
+              let clientId = pathHasPath.clientInfo.id
+              let pid = pathHasPath.pid
               clearTimeout(pathHasPath.requestTimer);
               var responseTimer = setTimeout(() => {
                 // @ts-ignore
                 this._clients.get(clientId).sendMsgToClient({ type: 'DATA', pid, code: 404, message: '找不到该请求' })
               }, 10 * 3600);
               console.log(`toBeSentRequestclient请求上传${{ type: 'DATA', pid, data: JSON.stringify(pathHasPath) }}`)
-              requestPool.toBeSentRequestclient.delete(dataInfo.path)
               let responsePathObject: any = {}
-              responsePathObject[`${dataInfo.path}`] = { clientInfo: pathHasPath.clientInfo, dataInfo: pathHasPath.dataInfo, pid, responseTimer }
+              responsePathObject[`${dataInfo.searchKey}`] = { clientInfo: pathHasPath.clientInfo, dataInfo: pathHasPath.dataInfo, pid, responseTimer }
               requestPool.toBeSentResponseclient.set(dataInfo.aid, { ...requestPool.toBeSentResponseclient.get(dataInfo.aid), ...responsePathObject })
-              requestPool.toBeSentResponseclient.set(dataInfo.path, responsePathObject[`${dataInfo.path}`])
+              requestPool.toBeSentResponseclient.set(dataInfo.searchKey, responsePathObject[`${dataInfo.searchKey}`])
+              requestPool.toBeSentRequestclient.delete(dataInfo.searchKey)
             }
           } else if (message.contentType === "response") {
             // 请求响应上报
@@ -190,67 +190,68 @@ export class ProxyServer {
             requestPool.data.set(dataInfo.did, { ...requestPool.data.get(dataInfo.did), ...dataInfo })
             let data = requestPool.data.get(dataInfo.did)
             let aid = requestPool.data.get(dataInfo.did).aid
-            pathObject[`${requestPool.data.get(dataInfo.did).path}`] = dataInfo
+            let oldAidMapInfo = requestPool.data.get(aid)
+            pathObject[`${requestPool.data.get(dataInfo.did).searchKey}`] = {...(oldAidMapInfo[`${requestPool.data.get(dataInfo.did).searchKey}`]||{}),...dataInfo}
             requestPool.data.set(aid, { ...requestPool.data.get(aid), ...pathObject })
-            requestPool.data.set(data.path, data)
+            requestPool.data.set(data.searchKey, data)
             console.log(`请求上传：${JSON.stringify(dataInfo)}`)
-            console.log(`合并数据${data.path}：${JSON.stringify(requestPool.data.get(data.path))}`)
+            console.log(`合并数据${data.searchKey}：${JSON.stringify(requestPool.data.get(data.searchKey))}`)
             console.log(`pathObject:${JSON.stringify(pathObject)}`)
             console.log('toBeSentResponseclient', requestPool.toBeSentResponseclient);
             let aidHasPath = requestPool.toBeSentResponseclient.get(aid);
-            let pathHasPath = requestPool.toBeSentResponseclient.get(data.path);
-            if (aidHasPath && aidHasPath[data.path]) {
-              let clientId = aidHasPath[data.path].clientInfo.id
-              let pid = aidHasPath[data.path].pid
-              clearTimeout(aidHasPath[data.path].responseTimer);
+            let pathHasPath = requestPool.toBeSentResponseclient.get(data.searchKey);
+            if (aidHasPath && aidHasPath[data.searchKey]) {
+              let clientId = aidHasPath[data.searchKey].clientInfo.id
+              let pid = aidHasPath[data.searchKey].pid
+              clearTimeout(aidHasPath[data.searchKey].responseTimer);
               // @ts-ignore
-              this._clients.get(clientId).sendMsgToClient({ type: 'DATA', pid, data: JSON.stringify(requestPool.data.get(aid)[data.path]) })
-              console.log(`请求返回：${{ type: 'DATA', pid, data: JSON.stringify({ type: 'DATA', pid, data: JSON.stringify(requestPool.data.get(aid)[data.path]) }) }}`)
-              delete requestPool.toBeSentResponseclient.get(aid)[data.path];
+              this._clients.get(clientId).sendMsgToClient({ type: 'DATA', pid, data: JSON.stringify(requestPool.data.get(aid)[data.searchKey]) })
+              console.log(`请求返回：${JSON.stringify({ type: 'DATA', pid, data: JSON.stringify({ type: 'DATA', pid, data: JSON.stringify(requestPool.data.get(aid)[data.searchKey]) }) })}`)
+              delete requestPool.toBeSentResponseclient.get(aid)[data.searchKey];
             } else if (pathHasPath) {
-              let clientId = pathHasPath[data.path].clientInfo.id
-              let pid = pathHasPath[data.path].pid
+              let clientId = pathHasPath.clientInfo.id
+              let pid = pathHasPath.pid
               clearTimeout(pathHasPath.responseTimer);
               // @ts-ignore
-              this._clients.get(clientId).sendMsgToClient({ type: 'DATA', pid, data: JSON.stringify(requestPool.data.get(data.path)) })
-              console.log(`请求返回：${{ type: 'DATA', pid, data: JSON.stringify(requestPool.data.get(data.path)) }}`)
-              requestPool.toBeSentResponseclient.delete(data.path)
+              this._clients.get(clientId).sendMsgToClient({ type: 'DATA', pid, data: JSON.stringify(requestPool.data.get(data.searchKey)) })
+              console.log(`请求返回：${JSON.stringify({ type: 'DATA', pid, data: JSON.stringify(requestPool.data.get(data.searchKey)) })}`)
+              requestPool.toBeSentResponseclient.delete(data.searchKey)
             }
           } else if (message.contentType === "query") {
             // 查询请求
             let aidMapinfo = requestPool.data.get(dataInfo.aid)
-            let pathMapInfo = requestPool.data.get(dataInfo.path)
-            if (aidMapinfo && aidMapinfo[dataInfo.path].responseBody) {
+            let pathMapInfo = requestPool.data.get(dataInfo.searchKey)
+            if (aidMapinfo && aidMapinfo[dataInfo.searchKey] && aidMapinfo[dataInfo.searchKey].responseBody) {
               // @ts-ignore
-              this._clients.get(clientInfo.id).sendMsgToClient({ type: 'DATA', pid: message.pid, data: JSON.stringify(aidMapinfo[dataInfo.path]) })
-              console.log(`aid一样请求返回：${JSON.stringify({ type: 'DATA', pid: message.pid, data: JSON.stringify(aidMapinfo[dataInfo.path]) })}`)
+              this._clients.get(clientInfo.id).sendMsgToClient({ type: 'DATA', pid: message.pid, data: JSON.stringify(aidMapinfo[dataInfo.searchKey]) })
+              console.log(`aid一样请求返回：${JSON.stringify({ type: 'DATA', pid: message.pid, data: JSON.stringify(aidMapinfo[dataInfo.searchKey]) })}`)
             } else if (pathMapInfo && pathMapInfo.responseBody) {
               // @ts-ignore
               this._clients.get(clientInfo.id).sendMsgToClient({ type: 'DATA', pid: message.pid, data: JSON.stringify(pathMapInfo) })
               console.log(`aid不一样请求返回：${JSON.stringify({ type: 'DATA', pid: message.pid, data: JSON.stringify(pathMapInfo) })}`)
             } else if (aidMapinfo || pathMapInfo) {
               var responseTimer = setTimeout(() => {
-                delete requestPool.toBeSentResponseclient.get(dataInfo.aid)[dataInfo.path];
-                requestPool.toBeSentResponseclient.delete(dataInfo.path)
+                delete requestPool.toBeSentResponseclient.get(dataInfo.aid)[dataInfo.searchKey];
+                requestPool.toBeSentResponseclient.delete(dataInfo.searchKey)
                 // @ts-ignore
                 this._clients.get(clientInfo.id).sendMsgToClient({ type: 'DATA', pid: message.pid, code: 404, message: '找不到该请求' })
               }, 10 * 3600);
               let pathObject: any = {}
-              pathObject[`${dataInfo.path}`] = { clientInfo, dataInfo, pid: message.pid, responseTimer }
+              pathObject[`${dataInfo.searchKey}`] = { clientInfo, dataInfo, pid: message.pid, responseTimer }
               requestPool.toBeSentResponseclient.set(dataInfo.aid, { ...requestPool.toBeSentResponseclient.get(dataInfo.aid), ...pathObject })
-              requestPool.toBeSentResponseclient.set(dataInfo.path, pathObject[`${dataInfo.path}`])
+              requestPool.toBeSentResponseclient.set(dataInfo.searchKey, pathObject[`${dataInfo.searchKey}`])
             } else if (!aidMapinfo && !pathMapInfo) {
               var requestTimer = setTimeout(() => {
-                delete requestPool.toBeSentRequestclient.get(dataInfo.aid)[dataInfo.path];
-                requestPool.toBeSentRequestclient.delete(dataInfo.path)
-                console.log('fyq:toBeSentRequestclient:', requestPool.toBeSentRequestclient.get(dataInfo.aid)[dataInfo.path])
+                delete requestPool.toBeSentRequestclient.get(dataInfo.aid)[dataInfo.searchKey];
+                requestPool.toBeSentRequestclient.delete(dataInfo.searchKey)
+                console.log('fyq:toBeSentRequestclient:', requestPool.toBeSentRequestclient.get(dataInfo.aid)[dataInfo.searchKey])
                 // @ts-ignore
                 this._clients.get(clientInfo.id).sendMsgToClient({ type: 'DATA', pid: message.pid, code: 404, message: '找不到该请求' })
               }, 2000);
               let pathObject: any = {}
-              pathObject[`${dataInfo.path}`] = { clientInfo, dataInfo, pid: message.pid, requestTimer }
+              pathObject[`${dataInfo.searchKey}`] = { clientInfo, dataInfo, pid: message.pid, requestTimer }
               requestPool.toBeSentRequestclient.set(dataInfo.aid, { ...requestPool.toBeSentRequestclient.get(dataInfo.aid), ...pathObject })
-              requestPool.toBeSentRequestclient.set(dataInfo.path, pathObject[`${dataInfo.path}`])
+              requestPool.toBeSentRequestclient.set(dataInfo.searchKey, pathObject[`${dataInfo.searchKey}`])
             }
           }
           break;

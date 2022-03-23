@@ -43,17 +43,57 @@
     <div class="equipment-list-component-bottom">
       <el-table
         v-if="passagewayList.length > 0"
+        row-key="id"
+        :expand-row-keys="expandedRowKeys"
         :data="clientList"
         stripe
         style="width: 100%; flex-grow: 1; overflow: auto; height: 0; display: flex"
       >
-        <el-table-column type="expand">
+        <el-table-column
+          class-name="open-detail-box"
+          type="expand"
+          align="left"
+          width="20"
+        >
           <template #default="props">
-            <p>序列号: {{ props.row.id }}</p>
+            <div class="detail-box">
+              <p>序列号: {{ props.row.id }}</p>
+              <div class="control-box">
+                <el-button
+                  class="delete-machine-btn"
+                  :icon="Delete"
+                  @click="deleteMachine(props.row.id)"
+                  size="small"
+                  type="danger"
+                  >删除设备</el-button
+                >
+                <el-button
+                  @click="manufacturerHandle(props.row)"
+                  :icon="props.row?.edit ? Check : Edit"
+                  size="small"
+                  :type="props.row?.edit ? 'success' : 'primary'"
+                  >{{ props.row?.edit ? "完成" : "修改名称" }}</el-button
+                >
+              </div>
+            </div>
           </template>
         </el-table-column>
-        <el-table-column prop="manufacturer" label="设备"></el-table-column>
-        <el-table-column label="状态" align="right" width="70">
+        <el-table-column prop="manufacturer" label="设备">
+          <template #default="props">
+            <div class="manufacturer-box">
+              <div v-if="!props.row?.edit">
+                {{ props.row.identificationName || props.row.manufacturer }}
+              </div>
+              <input
+                v-else
+                class="edit-manufacturer-input"
+                v-model="props.row.defaultName"
+                placeholder="输入设备名称"
+              />
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" align="right" width="60">
           <template #default="scope">
             <svg
               t="1646903397439"
@@ -113,7 +153,7 @@
 </template>
 
 <script lang="ts" setup>
-import { Plus, ArrowDown, Delete } from "@element-plus/icons-vue";
+import { Plus, ArrowDown, Delete, Check, Edit } from "@element-plus/icons-vue";
 import { ref, getCurrentInstance, onMounted, reactive, watch, computed } from "vue";
 import { ElMessage, ElForm, ElMessageBox } from "element-plus";
 import appStore from "../../../store";
@@ -189,6 +229,11 @@ const initListener = () => {
         } else {
           return 1;
         }
+      });
+      data.info.forEach((item) => {
+        item.identificationName = item?.identificationName || "";
+        item.defaultName = item?.identificationName || item?.manufacturer || "";
+        item.edit = false;
       });
       clientList.value = data.info;
     }
@@ -312,6 +357,10 @@ const deletePassageway = async (id: string) => {
     });
     setPassagewayList([]);
     if (data) {
+      ElMessage({
+        message: "删除通道成功",
+        type: "success",
+      });
       data = JSON.parse(data) || {};
       data.forEach((item) => {
         setPassagewayList([
@@ -328,7 +377,58 @@ const deletePassageway = async (id: string) => {
       }
     }
   } catch (error) {
+    ElMessage.error("删除通道失败");
     console.log(error);
+  }
+};
+
+// 删除设备
+const deleteMachine = async (id: string) => {
+  ElMessageBox.confirm("确定删除该设备吗？")
+    .then(async () => {
+      try {
+        console.log(passagewayName.value, id);
+        let data = await proxy.$electron.getDataService({
+          name: "deleteMachine",
+          data: {
+            passageway: passagewayName.value,
+            id,
+          },
+        });
+        if (data) {
+          ElMessage({
+            message: "删除设备成功",
+            type: "success",
+          });
+          getMulticontrolMachine();
+        }
+      } catch (error) {
+        ElMessage.error("删除通道失败");
+        console.error(error);
+      }
+    })
+    .catch(() => {});
+};
+
+// 更新设备名称
+const editMachineName = async (
+  passageway: string,
+  id: string,
+  identificationName: string
+) => {
+  try {
+    let data = await proxy.$electron.getDataService({
+      name: "editMachineName",
+      data: {
+        passageway,
+        id,
+        identificationName,
+      },
+    });
+    return data;
+  } catch (error) {
+    console.log(error);
+    return null;
   }
 };
 
@@ -339,6 +439,19 @@ const handledeletePassageway = (e, id) => {
       deletePassageway(id);
     })
     .catch(() => {});
+};
+
+const manufacturerHandle = async (row) => {
+  if (row.edit && row?.defaultName !== row?.identificationName) {
+    let data = await editMachineName(passagewayName.value, row.id, row.defaultName);
+    if (data) {
+      data = JSON.parse(data);
+      row.identificationName = data.identificationName;
+    }
+  } else {
+    row.defaultName = row?.identificationName || row?.manufacturer || "";
+  }
+  row.edit = !row.edit;
 };
 
 // 获取机器
@@ -358,6 +471,7 @@ const connectStateColor = (index: number, row: any) => {
 };
 
 onMounted(async () => {
+  setPassagewayList([]);
   initListener();
   await getSocketServerInfo();
   await getPassagewayList();
@@ -445,10 +559,36 @@ watch(
         height: 100%;
         flex: 1;
       }
+      .manufacturer-box {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        .edit-manufacturer-input {
+          flex: 1;
+          width: 0px;
+          margin-right: 4px;
+        }
+      }
+      .open-detail-box {
+        .cell {
+          padding: 0px;
+        }
+      }
+      .detail-box {
+        display: flex;
+        flex-direction: column;
+        .control-box {
+          display: flex;
+          .delete-machine-btn {
+            margin-left: auto;
+          }
+        }
+      }
     }
     .connectState {
       width: 15px;
       height: 15px;
+      margin-right: 7px;
     }
   }
 }

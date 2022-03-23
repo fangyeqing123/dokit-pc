@@ -38,6 +38,7 @@ import SocketMessageList from "./SocketMessageList";
       flex: 1;
       display: flex;
       flex-direction: column;
+      padding:0px;
       .el-tab-pane{
         display:flex;
         flex-direction: column;

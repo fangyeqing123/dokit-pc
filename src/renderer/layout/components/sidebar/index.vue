@@ -76,9 +76,10 @@ const isCollapse = computed(() => {
 
 <style lang="scss" scoped>
 .sidebar-wrapper {
-  transition: width 0.28s;
+  // transition: width 0.28s;
   height: 100%;
   overflow: hidden;
+  position:relative;
   &-scrollbar {
     height: calc(100% - 84px);
     overflow-x: hidden !important;
@@ -100,6 +101,16 @@ const isCollapse = computed(() => {
     border: none;
     height: 100%;
     width: 100% !important;
+  }
+  .moveBtn {
+    height: 100%;
+    width: 10px;
+    /* opacity: 0; */
+    position: absolute;
+    right: 0px;
+    top: 0;
+    cursor: col-resize;
+    background-color: yellow;
   }
 }
 </style>

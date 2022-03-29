@@ -1,12 +1,19 @@
 import db from './dataStore'
+import { getRanNum } from './util'
 
 // 新增通道
 export const addPassageway = (data: any) => {
-    return db.read().get('multiControl.appList').insert({
-        passagewayName: data.passagewayName,
-        identification: data.identification,
-        clientList: [],
-    }).write()
+    let identification = getRanNum(8)
+    const hasPassageway = JSON.stringify(db.read().get('multiControl.appList').find({ identification: identification }))
+    if (hasPassageway) {
+        addPassageway(data)
+    } else {
+        return db.read().get('multiControl.appList').insert({
+            passagewayName: data.passagewayName,
+            identification: identification,
+            clientList: [],
+        }).write()
+    }
 }
 // 删除通道
 export const deletePassageway = (id: any) => {
@@ -16,6 +23,10 @@ export const deletePassageway = (id: any) => {
 // 获取通道列表
 export const getPassagewayList = () => {
     return db.read().get('multiControl.appList')
+}
+// 查询设备信息
+export const queryMachineName = (passageway: string, id: any) => {
+    return db.read().get('multiControl.appList').find({ identification: passageway }).get('clientList').find({ id })
 }
 // 修改设备名称
 export const editMachineName = (passageway: string, id: any, identificationName: string) => {

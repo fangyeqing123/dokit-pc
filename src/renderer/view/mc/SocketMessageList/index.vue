@@ -31,13 +31,11 @@
         stripe
         @cell-click="openDetails"
         style="width: 100%; flex-grow: 1; overflow: auto; height: 0; display: flex"
-        :row-class-name="messageListRowClassName"
-      >
+        :row-class-name="messageListRowClassName">
         <el-table-column
           class-name="message-list-content-message"
           prop="message"
-          label="数据"
-        >
+          label="数据">
           <template #default="scope">
             <svg
               v-if="messageState(scope.$index, scope.row)"

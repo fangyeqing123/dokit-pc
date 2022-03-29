@@ -6,9 +6,12 @@
       </el-col>
       <el-col :xs="19" :sm="19" :md="19" :lg="18" :xl="18">
         <el-tabs type="border-card" class="messageContent">
-          <el-tab-pane label="SocketMessage"
-            ><SocketMessageList></SocketMessageList
-          ></el-tab-pane>
+          <el-tab-pane label="NetWork">
+            <NetWork></NetWork>
+          </el-tab-pane>
+          <el-tab-pane label="SocketMessage">
+            <SocketMessageList></SocketMessageList>
+          </el-tab-pane>
         </el-tabs>
       </el-col>
     </el-row>
@@ -18,6 +21,7 @@
 <script lang="ts" setup>
 import EquipmentList from "./EquipmentList";
 import SocketMessageList from "./SocketMessageList";
+import NetWork from "./NetWork";
 </script>
 
 <style lang="scss" scope>
@@ -29,6 +33,7 @@ import SocketMessageList from "./SocketMessageList";
   .el-col {
     height: 100%;
   }
+  .networkContent,
   .messageContent {
     height: 100%;
     display: flex;
@@ -38,9 +43,9 @@ import SocketMessageList from "./SocketMessageList";
       flex: 1;
       display: flex;
       flex-direction: column;
-      padding:0px;
-      .el-tab-pane{
-        display:flex;
+      padding: 0px;
+      .el-tab-pane {
+        display: flex;
         flex-direction: column;
         flex: 1;
       }

@@ -72,8 +72,8 @@ export class ProxyServer {
         console.log(`来自client端的socket已关闭,ClientId:${clientId}, CLOSE_CODE: ${msg}`)
         this.eventEmitter.emit('background/machineConnection', { type: 'CLOSE', connectSerial: (this._clients.get(clientId) as Client).connectSerial })
         const pathArray: Array<string> = Url.parse((this._clients.get(clientId) as Client).requestPath).pathname.split('/')
-        this._clients.delete(clientId)
-        this._clientInfo[pathArray[3]].delete(clientId);
+        this._clients.has(clientId) && this._clients.delete(clientId)
+        this._clientInfo[pathArray[3]] && this._clientInfo[pathArray[3]].has(clientId) && this._clientInfo[pathArray[3]].delete(clientId);
       })
     } catch (error) {
       console.error('error', error);
@@ -102,11 +102,15 @@ export class ProxyServer {
 
   _handleBackgroundEmitMsg(message: any, clientId: number) {
     if (message.type === 'LOGIN') {
+      let _client = this._clients.get(clientId) as Client
       if (JSON.parse(message.data).connectSerial) {
-        let _client = this._clients.get(clientId) as Client
         _client.connectSerial = JSON.parse(message.data).connectSerial
-        this._clients.set(clientId, _client)
       }
+      if (message.channelSerial) {
+        _client.channelSerial = message.channelSerial
+      }
+      this._clients.set(clientId, _client)
+      console.log('login:',this._clients.get(clientId))
       //@ts-ignore
       this._clients.get(clientId).sendMsgToClient(message)
     }
@@ -131,8 +135,10 @@ export class ProxyServer {
             ([clientId, client]) => {
               console.log(clientId, clientInfo.id)
               console.log('clientId', clientId, 'message', message)
-              if (clientId !== clientInfo.id) {
-                client.sendMsgToClient(message)
+              if (clientInfo.channelSerial===client.channelSerial) {
+                if (clientId !== clientInfo.id) {
+                  client.sendMsgToClient(message)
+                }
               }
             }
           )
@@ -143,116 +149,20 @@ export class ProxyServer {
           this._clients.get(clientInfo.id).sendMsgToClient(message)
           break;
         case 'DATA':
-          let dataInfo = JSON.parse(message.data)
-          if (message.contentType === "request") {
-            // 请求触发上报
-            let pathObject: any = {}
-            pathObject[`${dataInfo.searchKey}`] = dataInfo
-            requestPool.data.set(dataInfo.did, dataInfo)
-            requestPool.data.set(dataInfo.aid, { ...requestPool.data.get(dataInfo.aid), ...pathObject })
-            requestPool.data.set(dataInfo.searchKey, dataInfo)
-            console.log(`请求：${JSON.stringify(dataInfo)}`)
-            console.log('toBeSentRequestclient', requestPool.toBeSentRequestclient);
-            let aidHasPath = requestPool.toBeSentRequestclient.get(dataInfo.aid);
-            let pathHasPath = requestPool.toBeSentRequestclient.get(dataInfo.searchKey);
-            if (aidHasPath && aidHasPath[dataInfo.searchKey]) {
-              let clientId = aidHasPath[dataInfo.searchKey].clientInfo.id
-              let pid = aidHasPath[dataInfo.searchKey].pid
-              clearTimeout(aidHasPath[dataInfo.searchKey].requestTimer);
-              var responseTimer = setTimeout(() => {
-                // @ts-ignore
-                this._clients.get(clientId).sendMsgToClient({ type: 'DATA', pid, code: 404, message: '找不到该请求' })
-              }, 10 * 3600);
-              console.log(`toBeSentRequestclient请求上传：${JSON.stringify({ type: 'DATA', pid, data: JSON.stringify(aidHasPath[dataInfo.searchKey]) })}`)
-              let responsePathObject: any = {}
-              responsePathObject[`${dataInfo.searchKey}`] = { clientInfo: aidHasPath[dataInfo.searchKey].clientInfo, dataInfo: aidHasPath[dataInfo.searchKey].dataInfo, pid, responseTimer }
-              requestPool.toBeSentResponseclient.set(dataInfo.aid, { ...requestPool.toBeSentResponseclient.get(dataInfo.aid), ...responsePathObject })
-              requestPool.toBeSentResponseclient.set(dataInfo.searchKey, responsePathObject[`${dataInfo.searchKey}`])
-              delete requestPool.toBeSentRequestclient.get(dataInfo.aid)[dataInfo.searchKey];
-            } else if (pathHasPath) {
-              let clientId = pathHasPath.clientInfo.id
-              let pid = pathHasPath.pid
-              clearTimeout(pathHasPath.requestTimer);
-              var responseTimer = setTimeout(() => {
-                // @ts-ignore
-                this._clients.get(clientId).sendMsgToClient({ type: 'DATA', pid, code: 404, message: '找不到该请求' })
-              }, 10 * 3600);
-              console.log(`toBeSentRequestclient请求上传${{ type: 'DATA', pid, data: JSON.stringify(pathHasPath) }}`)
-              let responsePathObject: any = {}
-              responsePathObject[`${dataInfo.searchKey}`] = { clientInfo: pathHasPath.clientInfo, dataInfo: pathHasPath.dataInfo, pid, responseTimer }
-              requestPool.toBeSentResponseclient.set(dataInfo.aid, { ...requestPool.toBeSentResponseclient.get(dataInfo.aid), ...responsePathObject })
-              requestPool.toBeSentResponseclient.set(dataInfo.searchKey, responsePathObject[`${dataInfo.searchKey}`])
-              requestPool.toBeSentRequestclient.delete(dataInfo.searchKey)
+          try {
+            let dataInfo = JSON.parse(message.data)
+            if (message.contentType === "request") {
+              // 请求触发上报
+              requestPool.requestMessageManagement(dataInfo, this._clients, clientInfo);
+            } else if (message.contentType === "response") {
+              // 请求响应上报
+              requestPool.responseMessageManagement(dataInfo, this._clients, clientInfo);
+            } else if (message.contentType === "query") {
+              // 查询请求
+              requestPool.queryMessageManagement(message, this._clients, clientInfo);
             }
-          } else if (message.contentType === "response") {
-            // 请求响应上报
-            let pathObject: any = {}
-            requestPool.data.set(dataInfo.did, { ...requestPool.data.get(dataInfo.did), ...dataInfo })
-            let data = requestPool.data.get(dataInfo.did)
-            let aid = requestPool.data.get(dataInfo.did).aid
-            let oldAidMapInfo = requestPool.data.get(aid)
-            pathObject[`${requestPool.data.get(dataInfo.did).searchKey}`] = {...(oldAidMapInfo[`${requestPool.data.get(dataInfo.did).searchKey}`]||{}),...dataInfo}
-            requestPool.data.set(aid, { ...requestPool.data.get(aid), ...pathObject })
-            requestPool.data.set(data.searchKey, data)
-            console.log(`请求上传：${JSON.stringify(dataInfo)}`)
-            console.log(`合并数据${data.searchKey}：${JSON.stringify(requestPool.data.get(data.searchKey))}`)
-            console.log(`pathObject:${JSON.stringify(pathObject)}`)
-            console.log('toBeSentResponseclient', requestPool.toBeSentResponseclient);
-            let aidHasPath = requestPool.toBeSentResponseclient.get(aid);
-            let pathHasPath = requestPool.toBeSentResponseclient.get(data.searchKey);
-            if (aidHasPath && aidHasPath[data.searchKey]) {
-              let clientId = aidHasPath[data.searchKey].clientInfo.id
-              let pid = aidHasPath[data.searchKey].pid
-              clearTimeout(aidHasPath[data.searchKey].responseTimer);
-              // @ts-ignore
-              this._clients.get(clientId).sendMsgToClient({ type: 'DATA', pid, data: JSON.stringify(requestPool.data.get(aid)[data.searchKey]) })
-              console.log(`请求返回：${JSON.stringify({ type: 'DATA', pid, data: JSON.stringify({ type: 'DATA', pid, data: JSON.stringify(requestPool.data.get(aid)[data.searchKey]) }) })}`)
-              delete requestPool.toBeSentResponseclient.get(aid)[data.searchKey];
-            } else if (pathHasPath) {
-              let clientId = pathHasPath.clientInfo.id
-              let pid = pathHasPath.pid
-              clearTimeout(pathHasPath.responseTimer);
-              // @ts-ignore
-              this._clients.get(clientId).sendMsgToClient({ type: 'DATA', pid, data: JSON.stringify(requestPool.data.get(data.searchKey)) })
-              console.log(`请求返回：${JSON.stringify({ type: 'DATA', pid, data: JSON.stringify(requestPool.data.get(data.searchKey)) })}`)
-              requestPool.toBeSentResponseclient.delete(data.searchKey)
-            }
-          } else if (message.contentType === "query") {
-            // 查询请求
-            let aidMapinfo = requestPool.data.get(dataInfo.aid)
-            let pathMapInfo = requestPool.data.get(dataInfo.searchKey)
-            if (aidMapinfo && aidMapinfo[dataInfo.searchKey] && aidMapinfo[dataInfo.searchKey].responseBody) {
-              // @ts-ignore
-              this._clients.get(clientInfo.id).sendMsgToClient({ type: 'DATA', pid: message.pid, data: JSON.stringify(aidMapinfo[dataInfo.searchKey]) })
-              console.log(`aid一样请求返回：${JSON.stringify({ type: 'DATA', pid: message.pid, data: JSON.stringify(aidMapinfo[dataInfo.searchKey]) })}`)
-            } else if (pathMapInfo && pathMapInfo.responseBody) {
-              // @ts-ignore
-              this._clients.get(clientInfo.id).sendMsgToClient({ type: 'DATA', pid: message.pid, data: JSON.stringify(pathMapInfo) })
-              console.log(`aid不一样请求返回：${JSON.stringify({ type: 'DATA', pid: message.pid, data: JSON.stringify(pathMapInfo) })}`)
-            } else if (aidMapinfo || pathMapInfo) {
-              var responseTimer = setTimeout(() => {
-                delete requestPool.toBeSentResponseclient.get(dataInfo.aid)[dataInfo.searchKey];
-                requestPool.toBeSentResponseclient.delete(dataInfo.searchKey)
-                // @ts-ignore
-                this._clients.get(clientInfo.id).sendMsgToClient({ type: 'DATA', pid: message.pid, code: 404, message: '找不到该请求' })
-              }, 10 * 3600);
-              let pathObject: any = {}
-              pathObject[`${dataInfo.searchKey}`] = { clientInfo, dataInfo, pid: message.pid, responseTimer }
-              requestPool.toBeSentResponseclient.set(dataInfo.aid, { ...requestPool.toBeSentResponseclient.get(dataInfo.aid), ...pathObject })
-              requestPool.toBeSentResponseclient.set(dataInfo.searchKey, pathObject[`${dataInfo.searchKey}`])
-            } else if (!aidMapinfo && !pathMapInfo) {
-              var requestTimer = setTimeout(() => {
-                delete requestPool.toBeSentRequestclient.get(dataInfo.aid)[dataInfo.searchKey];
-                requestPool.toBeSentRequestclient.delete(dataInfo.searchKey)
-                console.log('fyq:toBeSentRequestclient:', requestPool.toBeSentRequestclient.get(dataInfo.aid)[dataInfo.searchKey])
-                // @ts-ignore
-                this._clients.get(clientInfo.id).sendMsgToClient({ type: 'DATA', pid: message.pid, code: 404, message: '找不到该请求' })
-              }, 2000);
-              let pathObject: any = {}
-              pathObject[`${dataInfo.searchKey}`] = { clientInfo, dataInfo, pid: message.pid, requestTimer }
-              requestPool.toBeSentRequestclient.set(dataInfo.aid, { ...requestPool.toBeSentRequestclient.get(dataInfo.aid), ...pathObject })
-              requestPool.toBeSentRequestclient.set(dataInfo.searchKey, pathObject[`${dataInfo.searchKey}`])
-            }
+          } catch (error) {
+            console.log(error)
           }
           break;
         default:

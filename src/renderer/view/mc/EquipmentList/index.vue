@@ -1,26 +1,12 @@
 <template>
   <div class="equipment-list-component">
     <div class="equipment-list-component-top-bar">
-      <el-tooltip
-        effect="light"
-        content="创建新的通道"
-        :show-after="500"
-        placement="bottom-start"
-        popper-class="add-passageway-tooltip"
-      >
-        <el-button
-          class="add-passageway-icon"
-          type="text"
-          @click="dialogVisible = true"
-          plain
-          :icon="Plus"
-        ></el-button>
-      </el-tooltip>
+      <div class="passageway-select-tip">当前应用:</div>
       <el-select
         v-model="passagewayActive"
         class="passageway-select"
         filterable
-        placeholder="通道选择"
+        placeholder="应用选择"
         popper-class="options-content"
       >
         <el-option
@@ -39,6 +25,21 @@
           ></el-button>
         </el-option>
       </el-select>
+      <el-tooltip
+        effect="light"
+        content="创建新的应用"
+        :show-after="500"
+        placement="bottom-start"
+        popper-class="add-passageway-tooltip"
+      >
+        <el-button
+          class="add-passageway-icon"
+          type="text"
+          @click="dialogVisible = true"
+          plain
+          :icon="Plus"
+        ></el-button>
+      </el-tooltip>
     </div>
     <div class="equipment-list-component-bottom">
       <el-table
@@ -115,17 +116,56 @@
         </el-table-column>
       </el-table>
       <el-empty v-else>
-        <el-button type="primary" @click="dialogVisible = true">新增通道</el-button>
+        <el-button type="primary" @click="dialogVisible = true">新增应用</el-button>
       </el-empty>
-      <div v-show="showQRCode" class="qrcode-box">
+      <div :class="`qrcode-box ${!showQRCode ? 'qrcode-box-close' : ''}`">
+        <div
+          class="qrcode-box-close-btn"
+          @click="
+            () => {
+              showQRCode = false;
+            }
+          "
+        >
+          <close style="width: 1em; height: 1em" />
+        </div>
         <span class="qrcode" id="qrcode"></span>
         <el-button type="primary" @click="copyText(socketServerUrl)">复制地址</el-button>
+      </div>
+      <div
+        v-show="!showQRCode && passagewayActive !== ''"
+        class="qrcode-show-btn"
+        @click="
+          () => {
+            showQRCode = true;
+          }
+        "
+      >
+        <svg
+          class="qr-code-svg"
+          width="26px"
+          height="26px"
+          viewBox="0 0 26 26"
+          version="1.1"
+        >
+          <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+            <g
+              transform="translate(1.000000, 1.000000)"
+              fill="#1CC19E"
+              fill-rule="nonzero"
+            >
+              <path
+                d="M9.84615385,0 L0.984615392,0 C0.440827327,0 0,0.440827327 0,0.984615392 L0,9.84615385 C0,10.3899419 0.440827336,10.8307692 0.984615392,10.8307692 L9.84615385,10.8307692 C10.3899419,10.8307692 10.8307692,10.3899419 10.8307692,9.84615385 L10.8307692,0.984615392 C10.8307692,0.440827336 10.3899419,0 9.84615385,0 Z M8.86153846,8.86153846 L1.96923076,8.86153846 L1.96923076,1.96923076 L8.86153846,1.96923076 L8.86153846,8.86153846 Z M9.84615385,12.8 L0.984615392,12.8 C0.440827336,12.8 0,13.2408273 0,13.7846154 L0,22.6461538 C0,23.1899419 0.440827327,23.6307692 0.984615392,23.6307692 L9.84615385,23.6307692 C10.3899419,23.6307692 10.8307692,23.1899419 10.8307692,22.6461538 L10.8307692,13.7846154 C10.8307692,13.2408273 10.3899419,12.8 9.84615385,12.8 L9.84615385,12.8 Z M8.86153846,21.6615385 L1.96923076,21.6615385 L1.96923076,14.7692308 L8.86153846,14.7692308 L8.86153846,21.6615385 Z M22.6461538,0 L13.7846154,0 C13.2408273,0 12.8,0.440827336 12.8,0.984615392 L12.8,9.84615385 C12.8,10.3899419 13.2408273,10.8307692 13.7846154,10.8307692 L22.6461538,10.8307692 C23.1899419,10.8307692 23.6307692,10.3899419 23.6307692,9.84615385 L23.6307692,0.984615392 C23.6307692,0.440827327 23.1899419,0 22.6461538,0 Z M21.6615385,8.86153846 L14.7692308,8.86153846 L14.7692308,1.96923076 L21.6615385,1.96923076 L21.6615385,8.86153846 Z M3.93846155,3.93846155 L6.8923077,3.93846155 L6.8923077,6.8923077 L3.93846155,6.8923077 L3.93846155,3.93846155 Z M23.6307692,18.7076923 L23.6307692,23.6307692 L18.7076923,23.6307692 L18.7076923,20.6769231 L20.6769231,20.6769231 L20.6769231,18.7076923 L23.6307692,18.7076923 Z M15.7538462,20.6769231 L15.7538462,23.6307692 L12.8,23.6307692 L12.8,20.6769231 L15.7538462,20.6769231 Z M6.8923077,16.7384615 L6.8923077,19.6923077 L3.93846155,19.6923077 L3.93846155,16.7384615 L6.8923077,16.7384615 Z M23.6307692,12.8 L23.6307692,15.7538462 L20.6769231,15.7538462 L20.6769231,12.8 L23.6307692,12.8 Z M18.7076923,15.7538462 L18.7076923,20.6769231 L15.7538462,20.6769231 L15.7538462,15.7538462 L18.7076923,15.7538462 Z M15.7538462,12.8 L15.7538462,15.7538462 L12.8,15.7538462 L12.8,12.8 L15.7538462,12.8 Z M19.6923077,3.93846155 L19.6923077,6.8923077 L16.7384615,6.8923077 L16.7384615,3.93846155 L19.6923077,3.93846155 Z"
+              ></path>
+            </g>
+          </g>
+        </svg>
       </div>
     </div>
   </div>
   <el-dialog
     v-model="dialogVisible"
-    title="新增通道"
+    title="新增应用"
     width="50%"
     :before-close="handleClose"
   >
@@ -136,11 +176,8 @@
       label-width="120px"
       class="demo-ruleForm"
     >
-      <el-form-item label="通道名称" prop="name">
+      <el-form-item label="应用名称" prop="name">
         <el-input v-model="ruleForm.name"></el-input>
-      </el-form-item>
-      <el-form-item label="唯一标识" prop="identification">
-        <el-input v-model="ruleForm.identification"></el-input>
       </el-form-item>
     </el-form>
     <template #footer>
@@ -153,7 +190,7 @@
 </template>
 
 <script lang="ts" setup>
-import { Plus, ArrowDown, Delete, Check, Edit } from "@element-plus/icons-vue";
+import { Plus, ArrowDown, Delete, Check, Edit, Close } from "@element-plus/icons-vue";
 import { ref, getCurrentInstance, onMounted, reactive, watch, computed } from "vue";
 import { ElMessage, ElForm, ElMessageBox } from "element-plus";
 import appStore from "../../../store";
@@ -172,7 +209,6 @@ const socketServerUrl = ref("");
 const ruleFormRef = ref<FormInstance>();
 const ruleForm = reactive({
   name: "",
-  identification: "",
 });
 const result = reactive({
   address: null,
@@ -182,29 +218,10 @@ const rules = reactive({
   name: [
     {
       required: true,
-      message: "请输入通道名称",
+      message: "请输入应用名称",
       trigger: "blur",
     },
-  ],
-  identification: [
-    {
-      required: true,
-      message: "请输入通唯一标识",
-      trigger: "blur",
-    },
-    {
-      validator(rule, value, callback, source, options) {
-        if (value) {
-          let rgx = /^[a-zA-Z]+$/;
-          if (value.match(rgx) === null) {
-            return callback(new Error("请检查输入格式，不能为空，且只支持英文"));
-          } else {
-            callback();
-          }
-        }
-      },
-    },
-  ],
+  ]
 });
 const submitForm = (formEl: FormInstance | undefined) => {
   if (!formEl) return;
@@ -213,7 +230,6 @@ const submitForm = (formEl: FormInstance | undefined) => {
       await addSocketServer();
       dialogVisible.value = false;
       ruleForm.name = "";
-      ruleForm.identification = "";
     } else {
       return false;
     }
@@ -222,7 +238,7 @@ const submitForm = (formEl: FormInstance | undefined) => {
 const initListener = () => {
   proxy.$electron.onMulticontrolEmit((message: any) => {
     let data = JSON.parse(message);
-    if (data.passageway === passagewayName.value) {
+    if (data.passageway === passagewayName.value && data?.info) {
       data.info.sort((a, b) => {
         if (connectingClientList.value.indexOf(a?.id) >= 0) {
           return -1;
@@ -261,13 +277,23 @@ const initListener = () => {
 const addSocketServer = async () => {
   try {
     // 发送同步消息
-    if (passagewayActive.value === "") {
-      socketServerUrl.value = `ws://${result.address}:${result.port}/proxy/multicontrol/${ruleForm.identification}`;
-      createQRCode(socketServerUrl.value);
-      showQRCode.value = true;
-      setPassagewayActive(socketServerUrl.value);
+    const data = await addPassageway();
+    if (data) {
+      setPassagewayList([
+        ...passagewayList.value,
+        {
+          value: `ws://${result.address}:${result.port}/proxy/multicontrol/${data.identification}`,
+          label: ruleForm.name,
+          id: data?.id,
+        },
+      ]);
+      if (passagewayActive.value === "") {
+        socketServerUrl.value = `ws://${result.address}:${result.port}/proxy/multicontrol/${data.identification}`;
+        createQRCode(socketServerUrl.value);
+        showQRCode.value = true;
+        setPassagewayActive(socketServerUrl.value);
+      }
     }
-    await addPassageway();
   } catch (error) {
     console.log(error);
   }
@@ -330,20 +356,13 @@ const addPassageway = async () => {
       name: "addPassageway",
       data: {
         passagewayName: ruleForm.name,
-        identification: ruleForm.identification,
       },
     });
     data = JSON.parse(data) || {};
-    setPassagewayList([
-      ...passagewayList.value,
-      {
-        value: `ws://${result.address}:${result.port}/proxy/multicontrol/${ruleForm.identification}`,
-        label: ruleForm.name,
-        id: data?.id,
-      },
-    ]);
+    return data;
   } catch (error) {
     console.log(error);
+    return null;
   }
 };
 // 删除通道
@@ -374,6 +393,8 @@ const deletePassageway = async (id: string) => {
       });
       if (passagewayList.value.length > 0) {
         setPassagewayActive(passagewayList.value[0].value);
+      } else {
+        setPassagewayActive("");
       }
     }
   } catch (error) {
@@ -484,9 +505,13 @@ onMounted(async () => {
 watch(
   () => passagewayActive.value,
   (newValue, oldValue) => {
-    socketServerUrl.value = newValue;
-    createQRCode(socketServerUrl.value);
-    showQRCode.value = true;
+    if (newValue !== "") {
+      socketServerUrl.value = newValue;
+      createQRCode(socketServerUrl.value);
+      showQRCode.value = true;
+    } else {
+      showQRCode.value = false;
+    }
     getMulticontrolMachine();
   }
 );
@@ -532,24 +557,51 @@ watch(
     margin-bottom: 5px;
     .passageway-select {
       flex: 1;
-      margin-left: 10px;
+      margin-left: 5px;
+      margin-right: 5px;
+    }
+    .passageway-select-tip {
+      font-size: 14px;
     }
   }
   &-bottom {
     display: flex;
     flex-direction: column;
     height: calc(100% - 40px);
+    overflow: hidden;
+    position: relative;
     .qrcode-box {
       display: flex;
       justify-content: center;
       align-items: center;
       flex-direction: column;
+      overflow: hidden;
+      height: 210px;
+      transition: all 0.5s;
+      transform: translate3d(0, 0, 0);
       .qrcode {
         img {
           width: 150px;
           height: 150px;
         }
       }
+      .qrcode-box-close-btn {
+        position: absolute;
+        top: 4px;
+        right: 10px;
+        cursor: pointer;
+        &:hover {
+          color: #66b1ff;
+        }
+      }
+    }
+    .qrcode-box-close {
+      width: 100%;
+      transform: translate3d(0, 100%, 0);
+      position: absolute;
+      bottom: 0;
+      z-index: 1;
+      background: #fff;
     }
     .el-table__inner-wrapper {
       overflow: auto;
@@ -589,6 +641,12 @@ watch(
       width: 15px;
       height: 15px;
       margin-right: 7px;
+    }
+    .qrcode-show-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 3px;
     }
   }
 }

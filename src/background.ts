@@ -1,15 +1,16 @@
 'use strict'
 
-import { app, protocol, BrowserWindow, ipcMain } from 'electron'
+import { app, protocol, BrowserWindow, ipcMain,Menu } from 'electron'
 import { createProtocol } from 'vue-cli-plugin-electron-builder/lib'
 import installExtension, { VUEJS3_DEVTOOLS } from 'electron-devtools-installer'
 import path from 'path'
 import { startProxyServer } from './main/socketServer/start'
 // import db from './main/dataStore'
 import { init as multiControlInit, getMulticontrolMachine } from './main/multiControl'
-import { addPassageway, getPassagewayList, deletePassageway, editMachineName, deleteMachine } from './main/dataService'
+import { addPassageway, getPassagewayList, deletePassageway, editMachineName, deleteMachine,queryMachineName } from './main/dataService'
 // import { dns } from 'address'
 const isDevelopment = process.env.NODE_ENV !== 'production'
+const isProduction = process.env.NODE_ENV === 'production'
 
 // Scheme must be registered before the app is ready
 protocol.registerSchemesAsPrivileged([
@@ -26,6 +27,8 @@ async function createWindow() {
       width: 1400,
       height: 900,
       show: false,
+      // titleBarStyle: 'hidden',
+      // frame: false,
       webPreferences: {
         // Use pluginOptions.nodeIntegration, leave this alone
         // See nklayman.github.io/vue-cli-plugin-electron-builder/guide/security.html#node-integration for more info
@@ -36,23 +39,20 @@ async function createWindow() {
     })
     console.log(process.env.WEBPACK_DEV_SERVER_URL)
     if (process.env.WEBPACK_DEV_SERVER_URL) {
-      // Load the url of the dev server if in development mode
       win.loadURL(process.env.WEBPACK_DEV_SERVER_URL)
       serverInfo = await startProxyServer()
       if (serverInfo) multiControlInit(serverInfo, win.webContents);
       win.on('ready-to-show', async () => {
         win.show();
-        if (!process.env.IS_TEST) win.webContents.openDevTools();
+        // if (!process.env.IS_TEST) win.webContents.openDevTools();
       })
     } else {
       createProtocol('app')
-      // Load the index.html when not in development
       win.loadURL('app://./index.html')
       serverInfo = await startProxyServer()
       if (serverInfo) multiControlInit(serverInfo, win.webContents);
       win.on('ready-to-show', async () => {
         win.show();
-        win.webContents.openDevTools()
       })
     }
     win.on('resize', () => {
@@ -64,6 +64,9 @@ async function createWindow() {
     })
     serverInfo.eventEmitter.on('background/message', (message: string, clientInfo: any, type: string) => {
       win.webContents.send('multicontrol/message', JSON.stringify({ message, clientInfo, type }))
+      if(JSON.parse(message).type==='DATA') {
+        win.webContents.send('multicontrol/network', JSON.stringify({ message, clientInfo }))
+      }
     })
   } catch (error) {
     console.error(error)
@@ -98,6 +101,12 @@ app.on('ready', async () => {
     }
   }
   createWindow()
+  if(isProduction){
+    Menu.setApplicationMenu(null);
+    if (process.platform !== 'darwin') {
+      app.dock.hide();
+    }
+  }
 })
 
 // Exit cleanly on request from parent process in development mode.
@@ -142,6 +151,9 @@ ipcMain.handle('getDataService', async (event, arg) => {
       return JSON.stringify(data)
     case 'deleteMachine':
       data = deleteMachine(arg.data.passageway, arg.data.id)
+      return JSON.stringify(data)
+      case 'queryMachineName':
+        data = queryMachineName(arg.data.passageway, arg.data.id)
       return JSON.stringify(data)
     default:
       return null

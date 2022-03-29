@@ -21,3 +21,13 @@ export const resolvePath = (dirPath:string) => {
   console.log('__dirname', __dirname)
   return path.join(startPath, dirPath || '.');
 }
+
+// 生成随机字母
+export const getRanNum = (length:Number) =>{
+  let result = [];
+  for(let i=0;i<(length||4);i++){
+      let ranNum = Math.ceil(Math.random() * 25);
+      result.push(String.fromCharCode(65+ranNum));
+  }
+  return result.join('');
+}

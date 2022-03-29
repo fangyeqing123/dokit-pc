@@ -1,8 +1,8 @@
 <template>
   <div class="sidebar-wrapper">
-    <div class="sidebar-wrapper-logo-box">
+    <!-- <div class="sidebar-wrapper-logo-box">
       <img src="../../../assets/logo.png" class="sidebar-wrapper-logo" />
-    </div>
+    </div> -->
     <el-scrollbar wrap-class="sidebar-wrapper-scrollbar">
       <el-menu
         :unique-opened="true"
@@ -101,16 +101,6 @@ const isCollapse = computed(() => {
     border: none;
     height: 100%;
     width: 100% !important;
-  }
-  .moveBtn {
-    height: 100%;
-    width: 10px;
-    /* opacity: 0; */
-    position: absolute;
-    right: 0px;
-    top: 0;
-    cursor: col-resize;
-    background-color: yellow;
   }
 }
 </style>

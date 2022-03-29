@@ -10,6 +10,7 @@ export class Client {
   public ip: String | undefined
   public requestPath: String | undefined
   public connectSerial: String | undefined
+  public channelSerial: String | undefined
 
   // private _pages:Array = []
 
@@ -31,12 +32,16 @@ export class Client {
         this._emit.emit('background/message', JSON.stringify(message), {
           id: this.id,
           name: this.name,
-          requestPath: this.requestPath
+          requestPath: this.requestPath,
+          connectSerial:this.connectSerial,
+          channelSerial:this.channelSerial,
         },'accept')
         this._emit.emit('message', message, {
           id: this.id,
           name: this.name,
-          requestPath: this.requestPath
+          requestPath: this.requestPath,
+          connectSerial:this.connectSerial,
+          channelSerial:this.channelSerial,
         })
       } catch (error) {
         console.log(error)
@@ -53,7 +58,9 @@ export class Client {
       this._emit.emit('background/message', JSON.stringify(message), {
         id: this.id,
         name: this.name,
-        requestPath: this.requestPath
+        requestPath: this.requestPath,
+        connectSerial:this.connectSerial,
+        channelSerial:this.channelSerial,
       },'send')
       console.log('===============向客户端进行数据推送end===============')
 

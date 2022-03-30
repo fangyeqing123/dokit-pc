@@ -1,5 +1,6 @@
 // inspire by PicGo 
 import Low from 'lowdb'
+// @ts-ignore
 import LodashId from 'lodash-id'
 import FileSync from 'lowdb/adapters/FileSync'
 import { app } from 'electron'
@@ -15,7 +16,8 @@ if (!fs.pathExistsSync(STORE_PATH)) {
 }
 
 class ConfigStore {
-  constructor () {
+  protected db: any
+  constructor() {
     const adapter = new FileSync(CONFIG_PATH)
 
     this.db = Low(adapter)
@@ -24,50 +26,48 @@ class ConfigStore {
     // 一机多控 专用
     if (!this.db.has('multiControl').value()) {
       this.db.set('multiControl', {
-        appList: [
-          {
-            appName: 'default',
-            clientList: [],
-            id: 'thisisdefault'
-          }
-        ]
+        appList: []
       }).write()
     }
   }
 
-  read () {
+  read() {
     return this.db.read()
   }
 
-  get (key = '') {
+  get(key = '') {
     return this.read().get(key).value()
   }
 
-  set (key, value) {
+  set(key: any, value: any) {
     return this.read().set(key, value).write()
   }
 
-  has (key) {
+  has(key: any) {
     return this.read().has(key).value()
   }
 
-  insert (key, value) {
+  insert(key: any, value: any) {
     return this.read().get(key).insert(value).write()
   }
 
-  unset (key, value) {
+  unset(key: any, value: any) {
     return this.read().get(key).unset(value).value()
   }
 
-  getById (key, id) {
+  getById(key: any, id: any) {
     return this.read().get(key).getById(id).value()
   }
 
-  removeById (key, id) {
+  removeById(key: any, id: any) {
     return this.read().get(key).removeById(id).write()
   }
 
-  getConfigPath () {
+  find(key: any, value: any) {
+    return this.read().get(key).find(value).value();
+  }
+
+  getConfigPath() {
     return CONFIG_PATH
   }
 }

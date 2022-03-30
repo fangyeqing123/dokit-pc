@@ -9,10 +9,12 @@ export class Client {
   private _emit: EventEmitter
   public ip: String | undefined
   public requestPath: String | undefined
+  public connectSerial: String | undefined
+  public channelSerial: String | undefined
 
   // private _pages:Array = []
 
-  constructor(id: Number, name: String, socket: WebSocket, emit: EventEmitter, ip:String | undefined, requestPath: String | undefined) {
+  constructor(id: Number, name: String, socket: WebSocket, emit: EventEmitter, ip: String | undefined, requestPath: String | undefined) {
     this.id = id
     this.name = name || 'Unknown'
     this._clientSocket = socket
@@ -27,10 +29,19 @@ export class Client {
     this._clientSocket.on('message', (message: any) => {
       try {
         message = JSON.parse(message);
+        this._emit.emit('background/message', JSON.stringify(message), {
+          id: this.id,
+          name: this.name,
+          requestPath: this.requestPath,
+          connectSerial:this.connectSerial,
+          channelSerial:this.channelSerial,
+        },'accept')
         this._emit.emit('message', message, {
           id: this.id,
           name: this.name,
-          requestPath: this.requestPath
+          requestPath: this.requestPath,
+          connectSerial:this.connectSerial,
+          channelSerial:this.channelSerial,
         })
       } catch (error) {
         console.log(error)
@@ -44,6 +55,13 @@ export class Client {
       console.log('===============向客户端进行数据推送start===============')
       console.log('原始数据', message)
       this._clientSocket.send(JSON.stringify(message))
+      this._emit.emit('background/message', JSON.stringify(message), {
+        id: this.id,
+        name: this.name,
+        requestPath: this.requestPath,
+        connectSerial:this.connectSerial,
+        channelSerial:this.channelSerial,
+      },'send')
       console.log('===============向客户端进行数据推送end===============')
 
     } catch (error) {

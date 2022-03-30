@@ -52,8 +52,8 @@ export class Client {
   sendMsgToClient(message: any) {
     try {
       // 向各个客户端进行数据推送
-      console.log('===============向客户端进行数据推送start===============')
-      console.log('原始数据', message)
+      // console.log('===============向客户端进行数据推送start===============')
+      // console.log('原始数据', message)
       this._clientSocket.send(JSON.stringify(message))
       this._emit.emit('background/message', JSON.stringify(message), {
         id: this.id,
@@ -62,7 +62,7 @@ export class Client {
         connectSerial:this.connectSerial,
         channelSerial:this.channelSerial,
       },'send')
-      console.log('===============向客户端进行数据推送end===============')
+      // console.log('===============向客户端进行数据推送end===============')
 
     } catch (error) {
       console.log('_sendMessageToNative error', error)

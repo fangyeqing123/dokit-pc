@@ -42,7 +42,6 @@ export class ProxyServer {
     console.warn(`web socket server listening, clients can connect ws server by ws://${this._serverAddressWithPort}${WS_CLENT_URL} ...`)
 
     wss.on('connection', (socket: WebSocket, request: IncomingMessage) => {
-      console.log('wss connection', socket.url, request.url)
       // @ts-ignore
       this._addClientMsgListener(socket, request)
     })
@@ -67,7 +66,6 @@ export class ProxyServer {
         clientId,
         new Client(clientId, '', socket, this.eventEmitter, ip, request.url)
       )
-      console.log(this._clients)
       socket.on('close', (msg: any) => {
         console.log(`来自client端的socket已关闭,ClientId:${clientId}, CLOSE_CODE: ${msg}`)
         this.eventEmitter.emit('background/machineConnection', { type: 'CLOSE', connectSerial: (this._clients.get(clientId) as Client).connectSerial })
@@ -84,7 +82,7 @@ export class ProxyServer {
   _addClientEmitListener() {
     this.eventEmitter.on('message', (message, clientInfo) => {
       // 接受Client侧消息
-      console.log('proxy recevie msg from client')
+      // console.log('proxy recevie msg from client')
       this._handleClientEmitMsg(message, clientInfo)
     })
   }
@@ -129,12 +127,11 @@ export class ProxyServer {
           break;
         // 已登录设备广播数据
         case 'BROADCAST':
-          console.log(Array.from(this._clientInfo[pathArray[3]].entries()))
           Array.from(this._clientInfo[pathArray[3]].entries()).forEach(
             // @ts-ignore
             ([clientId, client]) => {
-              console.log(clientId, clientInfo.id)
-              console.log('clientId', clientId, 'message', message)
+              // console.log(clientId, clientInfo.id)
+              // console.log('clientId', clientId, 'message', message)
               if (clientInfo.channelSerial===client.channelSerial) {
                 if (clientId !== clientInfo.id) {
                   client.sendMsgToClient(message)

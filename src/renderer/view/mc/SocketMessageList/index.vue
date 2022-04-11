@@ -26,16 +26,18 @@
       <el-button type="danger" @click="clearMessageList">清空</el-button>
     </div>
     <div class="message-list-content">
-      <el-table
+      <VirtualTable
         :data="filtersMessageList"
-        stripe
-        @cell-click="openDetails"
-        style="width: 100%; flex-grow: 1; overflow: auto; height: 0; display: flex"
-        :row-class-name="messageListRowClassName">
+        @cellClick="openDetails"
+        :rowClassName="virtualTableRowClassName"
+        dataKey="messageId"
+        :itemSize="40"
+      >
         <el-table-column
           class-name="message-list-content-message"
           prop="message"
-          label="数据">
+          label="数据"
+        >
           <template #default="scope">
             <svg
               v-if="messageState(scope.$index, scope.row)"
@@ -93,8 +95,7 @@
             </template>
           </template>
         </el-table-column>
-        <!-- <el-table-column prop="time" label="时间"></el-table-column> -->
-      </el-table>
+      </VirtualTable>
     </div>
     <el-drawer
       v-model="drawer"
@@ -107,18 +108,19 @@
         <div class="moveBtn" v-move="'socketMessageDetail'"></div>
         <div class="title">消息详情</div>
       </template>
-      <json-viewer :value="messageDetail" copyable boxed sort />
+      <json-viewer :value="messageDetail" :expand-depth="5" copyable boxed sort />
     </el-drawer>
   </div>
 </template>
 <script lang="ts" setup>
+import VirtualTable from "../../../components/VirtualTable";
 import "vue3-json-viewer/dist/index.css";
 import { ref, getCurrentInstance, onMounted, watch, computed } from "vue";
 import appStore from "../../../store";
 import { storeToRefs } from "pinia";
 import { canJsonParse } from "../../../utils";
 const { proxy }: any = getCurrentInstance();
-const { passagewayActive } = storeToRefs(appStore.socketPassageWay);
+const { passagewayActive, passagewayName } = storeToRefs(appStore.socketPassageWay);
 const messageTypeList = ref([
   {
     value: "ALL",
@@ -157,20 +159,15 @@ const switchMessage = (val) => {
     return {};
   }
 };
-const messageListRowClassName = ({ row, rowIndex }) => {
-  if (row.type === "accept") {
-    return "accept-row";
-  } else if (row.type === "send") {
-    return "send-row";
-  }
-  return "";
-};
 const initListener = () => {
+  let messageId = 0;
   proxy.$electron.onMulticontrolMessage((message: any) => {
     try {
+      messageId++;
       let data = JSON.parse(message);
       let mergeRequest = false;
       let mergeRequestIndex = -1;
+      data.messageId = messageId;
       messageList.value[data.clientInfo.requestPath] ||
         (messageList.value[data.clientInfo.requestPath] = []);
       let dataContentType = JSON.parse(data.message)?.contentType;
@@ -208,6 +205,14 @@ const messageState = (index: number, row: any) => {
     return false;
   }
 };
+const virtualTableRowClassName= ({row, rowIndex})=>{
+  if (row.type === "accept") {
+    return "accept-row";
+  } else if (row.type === "send") {
+    return "send-row";
+  }
+  return "";
+}
 const clearMessageList = () => {
   messageList.value[passagewayName.value] = [];
 };
@@ -224,11 +229,6 @@ const filtersMessageListWatch = () => {
     return messageList.value[passagewayName.value] || [];
   }
 };
-const passagewayName = computed(() => {
-  return `/proxy/multicontrol/${
-    passagewayActive.value.split("/")[passagewayActive.value.split("/").length - 1]
-  }`;
-});
 const openDetails = (row, column, cell, event) => {
   try {
     drawer.value = true;
@@ -258,11 +258,12 @@ watch(
     if (filterMessageText.value.trim() !== "") {
       list = list.filter((item) => item.message.indexOf(filterMessageText.value) >= 0);
     }
-    if (list?.length > 500) {
-      filtersMessageList.value = list.slice(-500);
-    } else {
-      filtersMessageList.value = list;
-    }
+    // if (list?.length > 2000) {
+    //   filtersMessageList.value = list.slice(-2000);
+    // } else {
+    filtersMessageList.value = list;
+    // }
+    console.log("filtersMessageList:", filtersMessageList);
   },
   { deep: true }
 );
@@ -292,7 +293,8 @@ onMounted(async () => {
   .message-list-content {
     display: flex;
     flex-direction: column;
-    flex: 1;
+    height: 0px;
+    flex-grow: 1;
     padding: 0 15px 0 15px;
     .el-table__inner-wrapper {
       overflow: auto;
@@ -322,7 +324,7 @@ onMounted(async () => {
   }
   .socketMessageDetail {
     position: relative !important;
-    height: 30%;
+    height: 40%;
     .el-drawer {
       height: 100% !important;
       .el-drawer__header {
@@ -339,7 +341,7 @@ onMounted(async () => {
         top: 0;
         cursor: ns-resize;
       }
-      .title{
+      .title {
         margin-right: auto;
         font-size: 16px;
       }

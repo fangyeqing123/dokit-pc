@@ -16,6 +16,9 @@ contextBridge.exposeInMainWorld('electron', {
   onMulticontrolNetWork: (fn: Function) => {
     ipcRenderer.on("multicontrol/network", (event, ...args) => fn(...args));
   },
+  onMulticontrolAction: (fn: Function) => {
+    ipcRenderer.on("multicontrol/action", (event, ...args) => fn(...args));
+  },
   // startSocketServer: () => ipcRenderer.sendSync('startSocketServer'),
   getRealSize: () => ipcRenderer.send('realSize'),
   onResizeEmit: (fn: Function) => {
@@ -40,4 +43,5 @@ contextBridge.exposeInMainWorld('electron', {
     }
   },
   getMulticontrolMachine: (info:any) => ipcRenderer.send('getMulticontrolMachine',info),
+  clearNetworkListMap: () => ipcRenderer.send('clearNetworkListMap'),
 })

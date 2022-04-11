@@ -1,22 +1,17 @@
 <template>
   <div class="network-list-box">
     <div class="network-filter-box">
-      <div>搜索:</div>
+      <div style="white-space: nowrap;">搜索:</div>
       <el-input
         class="filter-network-input"
         v-model="filterNetworkText"
         placeholder="请输入搜索"
       />
-      <el-button type="danger" @click="clearNetworkList">清空</el-button>
+      <el-button type="danger" @click="clearNetworkList">清空显示</el-button>
+      <el-button type="danger" @click="clearNetworkListMap">清空内存</el-button>
     </div>
     <div class="network-list-content">
-      <el-table
-        :data="filtersNetworkList"
-        stripe
-        @cell-click="openDetails"
-        :row-class-name="networkListRowClassName"
-        style="width: 100%; flex-grow: 1; overflow: auto; height: 0; display: flex"
-      >
+      <VirtualTable :data="filtersNetworkList" dataKey="messageId" :rowClassName="networkListRowClassName" @cellClick="openDetails" :itemSize="40">
         <el-table-column
           class-name="network-list-content-message"
           prop="message"
@@ -52,15 +47,14 @@
             <span v-else>Unknown</span>
           </template>
         </el-table-column>
-      </el-table>
+      </VirtualTable>
     </div>
     <el-drawer
       v-model="drawer"
       modal-class="network-message-detail"
       style="position: absolute"
       :modal="false"
-      direction="btt"
-    >
+      direction="btt">
       <template #title>
         <div class="moveBtn" v-move="'network-message-detail'"></div>
         <div class="title">接口详情</div>
@@ -88,11 +82,12 @@
 </template>
 <script lang="ts" setup>
 import "vue3-json-viewer/dist/index.css";
+import VirtualTable from "../../../components/VirtualTable";
 import { ref, getCurrentInstance, onMounted, watch, computed } from "vue";
 import appStore from "../../../store";
 import { storeToRefs } from "pinia";
 import { canJsonParse } from "../../../utils";
-const { passagewayActive } = storeToRefs(appStore.socketPassageWay);
+const { passagewayActive,passagewayName } = storeToRefs(appStore.socketPassageWay);
 const { proxy }: any = getCurrentInstance();
 const activeName = ref("request");
 const activeNetworkInfo = ref("");
@@ -114,12 +109,12 @@ const switchMessage = (val) => {
 const clearNetworkList = () => {
   networkList.value[passagewayName.value] = [];
 };
-const passagewayName = computed(() => {
-  return `/proxy/multicontrol/${
-    passagewayActive.value.split("/")[passagewayActive.value.split("/").length - 1]
-  }`;
-});
+const clearNetworkListMap = () =>{
+  proxy.$electron.clearNetworkListMap();
+  clearNetworkList();
+}
 const initListener = () => {
+  let messageId = 0;
   proxy.$electron.onMulticontrolNetWork(async (info: any) => {
     try {
       let jsonInfo = JSON.parse(info);
@@ -143,7 +138,8 @@ const initListener = () => {
         requestMessage,
         requestData;
       if (responseMessage.code === 404) {
-        console.log(responseMessage);
+        messageId++;
+        jsonInfo.messageId = messageId;
         networkList.value[jsonInfo.clientInfo.requestPath].push(jsonInfo);
         return;
       }
@@ -162,17 +158,22 @@ const initListener = () => {
           requestMessage = JSON.parse(
             networkList.value[jsonInfo.clientInfo.requestPath][mergeRequestIndex].message
           );
-          console.log("requestMessage", requestMessage,jsonInfo.clientInfo.connectSerial);
-          requestMessage.query||(requestMessage.query = {});
-          console.log('machineName:',machineName)
-          requestMessage.query[`${machineName}(${jsonInfo.clientInfo.connectSerial})`] = JSON.parse(
-            responseMessage.data
+          console.log(
+            "requestMessage",
+            requestMessage,
+            jsonInfo.clientInfo.connectSerial
           );
+          requestMessage.query || (requestMessage.query = {});
+          console.log("machineName:", machineName);
+          requestMessage.query[
+            `${machineName}(${jsonInfo.clientInfo.connectSerial})`
+          ] = JSON.parse(responseMessage.data);
           networkList.value[jsonInfo.clientInfo.requestPath][
             mergeRequestIndex
           ].message = JSON.stringify(requestMessage);
         }
       } else if (dataContentType !== "query" && dataContentType !== "queryResponse") {
+        messageId++;
         requestMessage = JSON.parse(jsonInfo.message);
         requestData = JSON.parse(requestMessage.data);
         let newMessage = {
@@ -181,6 +182,7 @@ const initListener = () => {
           },
         };
         jsonInfo.message = JSON.stringify(newMessage);
+        jsonInfo.messageId = messageId;
         networkList.value[jsonInfo.clientInfo.requestPath].push(jsonInfo);
       }
     } catch (error) {
@@ -238,10 +240,10 @@ const queryMachineName = async (id) => {
       },
     });
     if (data) {
-      let info = JSON.parse(data)
-      return info.identificationName||info.manufacturer
-    }else{
-      return ''
+      let info = JSON.parse(data);
+      return info.identificationName || info.manufacturer;
+    } else {
+      return "";
     }
   } catch (error) {
     console.log(error);
@@ -254,11 +256,11 @@ watch(
     if (filterNetworkText.value.trim() !== "") {
       list = list.filter((item) => item.message.indexOf(filterNetworkText.value) >= 0);
     }
-    if (list?.length > 500) {
-      filtersNetworkList.value = list.slice(-500);
-    } else {
-      filtersNetworkList.value = list;
-    }
+    // if (list?.length > 2000) {
+    //   filtersNetworkList.value = list.slice(-2000);
+    // } else {
+    filtersNetworkList.value = list;
+    // }
   },
   { deep: true }
 );
@@ -293,14 +295,14 @@ onMounted(async () => {
     padding: 15px 15px 0 15px;
   }
   .filter-network-input {
-    width: 400px;
     margin-left: 10px;
-    margin-right: auto;
+    margin-right: 10px;
   }
   .network-list-content {
     display: flex;
     flex-direction: column;
-    flex: 1;
+    height: 0px;
+    flex-grow: 1;
     padding: 0 15px 0 15px;
     .el-table__inner-wrapper {
       overflow: auto;
@@ -327,7 +329,7 @@ onMounted(async () => {
   }
   .network-message-detail {
     position: relative !important;
-    height: 30%;
+    height: 40%;
     .el-drawer {
       height: 100% !important;
       .el-drawer__header {

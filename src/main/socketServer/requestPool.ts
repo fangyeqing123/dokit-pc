@@ -2,10 +2,12 @@ class requestPool {
     public data: Map<any, any>
     public toBeSentResponseclient: Map<any, any>
     public toBeSentRequestclient: Map<any, any>
+    public toBeSentApiDifferentclient: Map<any, any>
     constructor() {
         this.data = new Map()
         this.toBeSentResponseclient = new Map()
         this.toBeSentRequestclient = new Map()
+        this.toBeSentApiDifferentclient = new Map()
     }
 
     requestMessageManagement(dataInfo: any, clients: any, clientInfo: any) {
@@ -15,6 +17,7 @@ class requestPool {
         let pathObject: any = {}
         pathObject[`${dataInfo.searchKey}`] = dataInfo
         this.data.set(didKey, dataInfo)
+        console.log('requestMessageManagement:',aidKey)
         this.data.set(aidKey, { ...this.data.get(dataInfo.aid), ...pathObject })
         this.data.set(pathKey, dataInfo)
         let aidHasPath = this.toBeSentRequestclient.get(aidKey);
@@ -62,7 +65,6 @@ class requestPool {
             }
         }
     }
-
     responseMessageManagement(dataInfo: any, clients: any, clientInfo: any) {
         const didKey = dataInfo.did + clientInfo.channelSerial
         const pathObject: any = {}
@@ -114,16 +116,39 @@ class requestPool {
         let pathMapInfo = this.data.get(pathKey)
         if (aidMapinfo && aidMapinfo[dataInfo.searchKey] && aidMapinfo[dataInfo.searchKey].responseBody) {
             clients.has(clientInfo.id) && clients.get(clientInfo.id).sendMsgToClient({ type: 'DATA', pid: message.pid, contentType: 'queryResponse', data: JSON.stringify(aidMapinfo[dataInfo.searchKey]) })
-            // console.log(`aid一样请求返回：${JSON.stringify({ type: 'DATA', pid: message.pid, data: JSON.stringify(aidMapinfo[dataInfo.searchKey]) })}`)
+            console.log(`aid一样请求返回：${JSON.stringify({ type: 'DATA', pid: message.pid, data: JSON.stringify(aidMapinfo[dataInfo.searchKey]) })}`)
         } else if (pathMapInfo && pathMapInfo.responseBody) {
-            clients.has(clientInfo.id) && clients.get(clientInfo.id).sendMsgToClient({ type: 'DATA', pid: message.pid, contentType: 'queryResponse', data: JSON.stringify(pathMapInfo) })
-            // console.log(`aid不一样请求返回：${JSON.stringify({ type: 'DATA', pid: message.pid, data: JSON.stringify(pathMapInfo) })}`)
+            let requestTimer: any, pathAidObject: any = {}, pathKeyObject: any = {}
+            requestTimer = setTimeout(() => {
+                let newPathMapInfo = this.data.get(pathKey)
+                let aidKeylength = (this.toBeSentRequestclient.get(aidKey) && this.toBeSentRequestclient.get(aidKey)[dataInfo.searchKey]) ? this.toBeSentRequestclient.get(aidKey)[dataInfo.searchKey].length : 0;
+                let pathKeylength = this.toBeSentRequestclient.get(pathKey) ? this.toBeSentRequestclient.get(pathKey).length : 0;
+                while (aidKeylength--) {
+                    if (this.toBeSentRequestclient.get(aidKey)[dataInfo.searchKey][aidKeylength].pid == message.pid) {
+                        this.toBeSentRequestclient.get(aidKey)[dataInfo.searchKey].splice(aidKeylength, 1);
+                    }
+                };
+                while (pathKeylength--) {
+                    if (this.toBeSentRequestclient.get(pathKey)[pathKeylength].pid == message.pid) {
+                        this.toBeSentRequestclient.get(pathKey).splice(pathKeylength, 1);
+                    }
+                };
+                if (newPathMapInfo && newPathMapInfo.responseBody){
+                    clients.has(clientInfo.id) && clients.get(clientInfo.id).sendMsgToClient({ type: 'DATA', pid: message.pid, contentType: 'queryResponse', data: JSON.stringify(newPathMapInfo) })
+                    console.log(`aid不一样请求返回：${JSON.stringify({ type: 'DATA', pid: message.pid, data: JSON.stringify(newPathMapInfo) })}`)
+                } else {
+                    clients.has(clientInfo.id) && clients.get(clientInfo.id).sendMsgToClient({ type: 'DATA', pid: message.pid, data: JSON.stringify(dataInfo), code: 404, contentType: 'queryResponse', message: '找不到该请求' });
+                }
+                clearTimeout(requestTimer);
+            }, 1000);
+            let aidKeyInfo = this.toBeSentRequestclient.get(aidKey)
+            pathAidObject[`${dataInfo.searchKey}`] = [{ clientInfo, dataInfo, pid: message.pid, requestTimer }, ...(aidKeyInfo ? (aidKeyInfo[`${dataInfo.searchKey}`] || []) : [])];
+            pathKeyObject[`${dataInfo.searchKey}`] = [{ clientInfo, dataInfo, pid: message.pid, requestTimer }, ...(this.toBeSentRequestclient.get(pathKey) || [])];
+            this.toBeSentRequestclient.set(aidKey, { ...aidKeyInfo, ...pathAidObject });
+            this.toBeSentRequestclient.set(pathKey, pathKeyObject[`${dataInfo.searchKey}`]);
         } else if (aidMapinfo || pathMapInfo) {
             let responseTimer: any, pathAidObject: any = {}, pathKeyObject: any = {}
             responseTimer = setTimeout(() => {
-                // console.log('fyq:toBeSentResponseclient:', this.toBeSentResponseclient.get(aidKey)[dataInfo.searchKey])
-                // delete this.toBeSentResponseclient.get(aidKey)[dataInfo.searchKey];
-                // this.toBeSentResponseclient.delete(pathKey)
                 let aidKeylength = (this.toBeSentResponseclient.get(aidKey) && this.toBeSentResponseclient.get(aidKey)[dataInfo.searchKey]) ? this.toBeSentResponseclient.get(aidKey)[dataInfo.searchKey].length : 0;
                 let pathKeylength = this.toBeSentResponseclient.get(pathKey) ? this.toBeSentResponseclient.get(pathKey).length : 0;
                 console.log('aidKeylength', aidKeylength, pathKeylength)
@@ -132,7 +157,6 @@ class requestPool {
                         this.toBeSentResponseclient.get(aidKey)[dataInfo.searchKey].splice(aidKeylength, 1);
                     }
                 };
-                // this.toBeSentResponseclient.delete(pathKey)
                 while (pathKeylength--) {
                     if (this.toBeSentResponseclient.get(pathKey)[pathKeylength].pid == message.pid) {
                         this.toBeSentResponseclient.get(pathKey).splice(pathKeylength, 1);
@@ -152,7 +176,6 @@ class requestPool {
             console.log('aidKey:', aidKey)
             console.log('pathKey:', pathKey)
             requestTimer = setTimeout(() => {
-                // delete this.toBeSentRequestclient.get(aidKey)[dataInfo.searchKey];
                 let aidKeylength = (this.toBeSentRequestclient.get(aidKey) && this.toBeSentRequestclient.get(aidKey)[dataInfo.searchKey]) ? this.toBeSentRequestclient.get(aidKey)[dataInfo.searchKey].length : 0;
                 let pathKeylength = this.toBeSentRequestclient.get(pathKey) ? this.toBeSentRequestclient.get(pathKey).length : 0;
                 while (aidKeylength--) {
@@ -160,7 +183,6 @@ class requestPool {
                         this.toBeSentRequestclient.get(aidKey)[dataInfo.searchKey].splice(aidKeylength, 1);
                     }
                 };
-                // this.toBeSentRequestclient.delete(pathKey)
                 while (pathKeylength--) {
                     if (this.toBeSentRequestclient.get(pathKey)[pathKeylength].pid == message.pid) {
                         this.toBeSentRequestclient.get(pathKey).splice(pathKeylength, 1);
@@ -176,6 +198,12 @@ class requestPool {
             this.toBeSentRequestclient.set(pathKey, pathKeyObject[`${dataInfo.searchKey}`]);
             console.log('fyq:toBeSentRequestclient:', this.toBeSentRequestclient.get(aidKey));
         }
+    }
+    clearPool(){
+        this.data.clear()
+        this.toBeSentResponseclient.clear()
+        this.toBeSentRequestclient.clear()
+        this.toBeSentApiDifferentclient.clear()
     }
 }
 

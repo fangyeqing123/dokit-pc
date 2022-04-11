@@ -1,4 +1,4 @@
-import { ref, reactive } from 'vue';
+import { ref, reactive,computed } from 'vue';
 import { defineStore } from 'pinia';
 
 
@@ -9,6 +9,11 @@ export const useSocketPassageWayStoreForSetup = defineStore('socketPassageWayFor
         address: null,
         port: null
     })
+    const passagewayName = computed(() => {
+        return `/proxy/multicontrol/${
+            passagewayActive.value.split("/")[passagewayActive.value.split("/").length - 1]
+        }`;
+    });
     function setPassagewayList(size: Array<object>) {
         passagewayList.value !== size && (passagewayList.value = size);
     }
@@ -19,5 +24,5 @@ export const useSocketPassageWayStoreForSetup = defineStore('socketPassageWayFor
         serverInfo.address = info.address
         serverInfo.port = info.port
     }
-    return { passagewayActive, passagewayList, serverInfo, setPassagewayList, setPassagewayActive, setServerInfo };
+    return { passagewayActive, passagewayList, serverInfo,passagewayName, setPassagewayList, setPassagewayActive, setServerInfo };
 });

@@ -600,7 +600,7 @@ watch(
       transform: translate3d(0, 100%, 0);
       position: absolute;
       bottom: 0;
-      z-index: 1;
+      z-index: 10;
       background: #fff;
     }
     .el-table__inner-wrapper {

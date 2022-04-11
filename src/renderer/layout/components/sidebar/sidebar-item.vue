@@ -3,9 +3,7 @@
     v-if="!item.meta || !item.meta.hidden"
     :class="{ 'simple-mode': isCollapse, 'first-level': isFirstLevel }"
   >
-    <template
-      v-if="!alwaysShowRootMenu && theOnlyOneChild && !theOnlyOneChild.children"
-    >
+    <template v-if="!alwaysShowRootMenu && theOnlyOneChild && !theOnlyOneChild.children">
       <SidebarItemLink
         v-if="theOnlyOneChild.meta"
         :to="resolvePath(theOnlyOneChild.path)"

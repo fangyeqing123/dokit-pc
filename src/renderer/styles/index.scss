@@ -38,3 +38,9 @@ div:focus {
 .el-popper.add-passageway-tooltip {
   box-shadow: 2px 2px 5px #dbdbdb !important;
 }
+
+.text-ellipsis {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

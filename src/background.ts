@@ -5,6 +5,7 @@ import { createProtocol } from 'vue-cli-plugin-electron-builder/lib'
 import installExtension, { VUEJS3_DEVTOOLS } from 'electron-devtools-installer'
 import path from 'path'
 import { startProxyServer } from './main/socketServer/start'
+import requestPool from './main/socketServer/requestPool'
 // import db from './main/dataStore'
 import { init as multiControlInit, getMulticontrolMachine } from './main/multiControl'
 import { addPassageway, getPassagewayList, deletePassageway, editMachineName, deleteMachine,queryMachineName } from './main/dataService'
@@ -66,6 +67,9 @@ async function createWindow() {
       win.webContents.send('multicontrol/message', JSON.stringify({ message, clientInfo, type }))
       if(JSON.parse(message).type==='DATA') {
         win.webContents.send('multicontrol/network', JSON.stringify({ message, clientInfo }))
+      }
+      if(JSON.parse(message).contentType==='action') {
+        win.webContents.send('multicontrol/action', JSON.stringify({ message, clientInfo }))
       }
     })
   } catch (error) {
@@ -133,6 +137,9 @@ ipcMain.on("realSize", () => {
 })
 ipcMain.on('getMulticontrolMachine', async (event, arg) => {
   getMulticontrolMachine(win.webContents, arg)
+})
+ipcMain.on('clearNetworkListMap', async (event, arg) => {
+  requestPool.clearPool()
 })
 ipcMain.handle('getDataService', async (event, arg) => {
   let data

@@ -9,7 +9,10 @@ export default {
   name: 'App',
   components: {
     // MultiControl
-  }
+  },
+  created() {
+    document.title = 'DoKitStudio'
+  },
 }
 </script>
 

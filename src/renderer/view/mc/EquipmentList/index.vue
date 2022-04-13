@@ -45,7 +45,6 @@
       <el-table
         v-if="passagewayList.length > 0"
         row-key="id"
-        :expand-row-keys="expandedRowKeys"
         :data="clientList"
         stripe
         style="width: 100%; flex-grow: 1; overflow: auto; height: 0; display: flex"
@@ -252,6 +251,7 @@ const initListener = () => {
         item.edit = false;
       });
       clientList.value = data.info;
+      console.log(clientList.value)
     }
   });
   proxy.$electron.onMulticontrolConnection((message: any) => {

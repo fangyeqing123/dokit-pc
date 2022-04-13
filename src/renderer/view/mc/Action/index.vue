@@ -11,7 +11,7 @@
     </div>
     <div class="action-list-content">
       <VirtualTable :data="filtersActionList" dataKey="messageId" @cellClick="openDetails" :itemSize="40">
-        <el-table-column prop="message" width="170" label="dateTime">
+        <el-table-column prop="message" width="200" label="dateTime">
           <template #default="scope">
             <div class="text-ellipsis">{{switchMessage(switchMessage(scope.row.message).data).dateTime}}</div>
           </template>

@@ -80,6 +80,7 @@ class requestPool {
         let aidHasPath = this.toBeSentResponseclient.get(aidKey);
         let pathHasPath = this.toBeSentResponseclient.get(pathKey);
         let aidKeylength, pathKeylength;
+        console.log('pathKey:', pathKey)
         console.log('aidHasPath:', aidHasPath)
         console.log('pathHasPath:', pathHasPath)
         if (aidHasPath && aidHasPath[data.searchKey]) {
@@ -114,6 +115,9 @@ class requestPool {
         const pathKey = dataInfo.searchKey + clientInfo.channelSerial
         let aidMapinfo = this.data.get(aidKey)
         let pathMapInfo = this.data.get(pathKey)
+        console.log('querypathKey:', pathKey)
+        console.log('queryaidHasPath:', aidMapinfo)
+        console.log('querypathHasPath:', pathMapInfo)
         if (aidMapinfo && aidMapinfo[dataInfo.searchKey] && aidMapinfo[dataInfo.searchKey].responseBody) {
             clients.has(clientInfo.id) && clients.get(clientInfo.id).sendMsgToClient({ type: 'DATA', pid: message.pid, contentType: 'queryResponse', data: JSON.stringify(aidMapinfo[dataInfo.searchKey]) })
             console.log(`aid一样请求返回：${JSON.stringify({ type: 'DATA', pid: message.pid, data: JSON.stringify(aidMapinfo[dataInfo.searchKey]) })}`)

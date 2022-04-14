@@ -68,7 +68,7 @@ async function createWindow() {
       if(JSON.parse(message).type==='DATA') {
         win.webContents.send('multicontrol/network', JSON.stringify({ message, clientInfo }))
       }
-      if(JSON.parse(message).contentType==='action') {
+      if(JSON.parse(message).contentType==='action' && type === "send") {
         win.webContents.send('multicontrol/action', JSON.stringify({ message, clientInfo }))
       }
     })
